@@ -14,6 +14,6 @@ public class PlanningController {
 
     @GetMapping("/api/plans/test-trip")
     public String testTrip() {
-        return planningService.fetchTestTrip();
+        return planningService.getTestTrip();
     }
 }
