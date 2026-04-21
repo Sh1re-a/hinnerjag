@@ -1,27 +1,18 @@
 package nu.hinnerjag.backend.planning;
 
+import nu.hinnerjag.backend.external.trafiklab.TrafiklabJourneyClient;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
 @Service
 public class PlanningService {
 
-    private final RestClient restClient = RestClient.create();
+    private final TrafiklabJourneyClient trafiklabJourneyClient;
 
-    public String fetchTestTrip() {
-        String url = "https://journeyplanner.integration.sl.se/v2/trips" +
-                "?type_origin=coord" +
-                "&name_origin=18.082494:59.257932:WGS84[dd.ddddd]" +
-                "&type_destination=coord" +
-                "&name_destination=18.072226:59.319633:WGS84[dd.ddddd]" +
-                "&calc_number_of_trips=1" +
-                "&language=en" +
-                "&route_type=leasttime" +
-                "&gen_c=true";
+    public PlanningService(TrafiklabJourneyClient trafiklabJourneyClient) {
+        this.trafiklabJourneyClient = trafiklabJourneyClient;
+    }
 
-        return restClient.get()
-                .uri(url)
-                .retrieve()
-                .body(String.class);
+    public String getTestTrip() {
+        return trafiklabJourneyClient.fetchTestTrip();
     }
 }
