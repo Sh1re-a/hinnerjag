@@ -1,9 +1,0 @@
-<component name="InspectionProjectProfileManager">
-  <profile version="1.0">
-    <option name="myName" value="Project Default" />
-    <inspection_tool class="CheckStyle" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="All Changed Files" level="WARNING" enabled="true" />
-    </inspection_tool>
-    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
-  </profile>
-</component>
