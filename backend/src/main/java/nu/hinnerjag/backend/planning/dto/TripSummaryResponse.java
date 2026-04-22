@@ -6,6 +6,8 @@ public record TripSummaryResponse(
         Integer plannedDurationMinutes,
         Integer realtimeDurationMinutes,
         Integer walkingDurationMinutes,
+        String leaveAt,
+        Integer leaveInMinutes,
         Integer transfers,
         TripRouteResponse route,
         TripInsightResponse insights,
