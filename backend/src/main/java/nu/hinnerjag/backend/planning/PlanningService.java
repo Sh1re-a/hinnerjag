@@ -3,11 +3,18 @@ package nu.hinnerjag.backend.planning;
 import nu.hinnerjag.backend.external.trafiklab.TrafiklabJourneyClient;
 import nu.hinnerjag.backend.external.trafiklab.dto.JourneyDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
+import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
+import nu.hinnerjag.backend.planning.dto.TripRouteResponse;
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Service
 public class PlanningService {
+
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     private final TrafiklabJourneyClient trafiklabJourneyClient;
 
@@ -24,10 +31,25 @@ public class PlanningService {
 
         JourneyDto firstJourney = response.journeys().get(0);
 
+        if (firstJourney.legs() == null || firstJourney.legs().isEmpty()) {
+            throw new IllegalStateException("No legs returned from Trafiklab");
+        }
+
+        LegDto firstLeg = firstJourney.legs().get(0);
+
+        TripRouteResponse route = new TripRouteResponse(
+                formatTime(firstLeg.origin().departureTimeEstimated()),
+                formatTime(firstLeg.destination().arrivalTimeEstimated()),
+                firstLeg.transportation().product().name(),
+                firstLeg.transportation().disassembledName(),
+                firstLeg.transportation().destination().name()
+        );
+
         return new TripSummaryResponse(
                 secondsToMinutes(firstJourney.tripDuration()),
                 secondsToMinutes(firstJourney.tripRtDuration()),
-                firstJourney.interchanges()
+                firstJourney.interchanges(),
+                route
         );
     }
 
@@ -36,5 +58,12 @@ public class PlanningService {
             return null;
         }
         return seconds / 60;
+    }
+
+    private String formatTime(String isoDateTime) {
+        if (isoDateTime == null || isoDateTime.isBlank()) {
+            return null;
+        }
+        return OffsetDateTime.parse(isoDateTime).format(TIME_FORMATTER);
     }
 }
