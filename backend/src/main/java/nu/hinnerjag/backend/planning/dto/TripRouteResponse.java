@@ -5,6 +5,9 @@ public record TripRouteResponse(
         String arrivalTime,
         String mode,
         String line,
-        String toward
+        String toward,
+        String originName,
+        String destinationName,
+        String platform
 ) {
 }
