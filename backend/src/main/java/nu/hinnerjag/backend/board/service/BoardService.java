@@ -91,10 +91,15 @@ public class BoardService {
         return null;
     }
 
-    private List<NearbyBoardSiteResponse> findNearbyBusStops(List<SiteWithDistance> nearbySites) {
-        List<NearbyBoardSiteResponse> busStops = new ArrayList<>();
-
+    private List<NearbyBoardSiteResponse> findNearbyBusStops(
+            List<SiteWithDistance> nearbySites,
+            NearbyBoardSiteResponse nearestMetro
+    ) {
+        List<NearbyBoardSiteResponse> nearbyBusStops = findNearbyBusStops(nearbySites, nearestMetro);
         for (SiteWithDistance candidate : nearbySites) {
+            if (nearestMetro != null && candidate.site().siteId().equals(nearestMetro.siteId())) {
+                continue;
+            }
             if (candidate.distanceMeters() > BUS_RADIUS_METERS) {
                 continue;
             }

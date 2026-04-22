@@ -28,6 +28,7 @@ public class TrafiklabTransportClient {
         try {
             return fetchDeparturesBySiteId(siteId);
         } catch (RestClientException exception) {
+            System.out.println("Skipping site " + siteId + " because departures lookup failed.");
             return null;
         }
     }
