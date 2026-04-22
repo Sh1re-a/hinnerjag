@@ -1,7 +1,9 @@
 package nu.hinnerjag.backend.external.trafiklab.transport.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record TransportLineDto(
         String designation,
-        String transportMode
+        @JsonProperty("transport_mode") String transportMode
 ) {
 }

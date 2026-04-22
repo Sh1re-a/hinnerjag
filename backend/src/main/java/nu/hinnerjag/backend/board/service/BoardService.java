@@ -138,7 +138,7 @@ public class BoardService {
                     departure.line() != null ? departure.line().designation() : null,
                     extractDestination(departure),
                     departure.display(),
-                    null
+                    departure.line() != null ? departure.line().transportMode() : null
             ));
 
             if (result.size() == MAX_DEPARTURES) {
