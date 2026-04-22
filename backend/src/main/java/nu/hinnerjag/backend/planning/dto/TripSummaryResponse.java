@@ -14,6 +14,6 @@ public record TripSummaryResponse(
         List<JourneySegmentResponse> segments,
         List<JourneyStopResponse> stops,
         List<CoordinateResponse> polyline,
-        StationBufferResponse stationBuffer
+        StationTimingResponse stationTiming
 ) {
 }
