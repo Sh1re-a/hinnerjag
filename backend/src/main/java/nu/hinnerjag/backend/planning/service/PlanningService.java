@@ -5,10 +5,7 @@ import nu.hinnerjag.backend.external.trafiklab.dto.JourneyDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
 import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.TransportationDto;
-import nu.hinnerjag.backend.planning.dto.JourneySegmentResponse;
-import nu.hinnerjag.backend.planning.dto.TripInsightResponse;
-import nu.hinnerjag.backend.planning.dto.TripRouteResponse;
-import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
+import nu.hinnerjag.backend.planning.dto.*;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,17 +17,19 @@ public class PlanningService {
     private final JourneySelectionService journeySelectionService;
     private final PlanningFieldExtractor fieldExtractor;
     private final JourneySegmentService journeySegmentService;
+    private final JourneyStopService journeyStopService;
 
     public PlanningService(
             TrafiklabJourneyClient trafiklabJourneyClient,
             JourneySelectionService journeySelectionService,
             PlanningFieldExtractor fieldExtractor,
-            JourneySegmentService journeySegmentService
+            JourneySegmentService journeySegmentService, JourneyStopService journeyStopService
     ) {
         this.trafiklabJourneyClient = trafiklabJourneyClient;
         this.journeySelectionService = journeySelectionService;
         this.fieldExtractor = fieldExtractor;
         this.journeySegmentService = journeySegmentService;
+        this.journeyStopService = journeyStopService;
     }
 
     public TripSummaryResponse getTestTrip() {
@@ -42,6 +41,7 @@ public class PlanningService {
         TripInsightResponse insights = buildInsights(firstTransitLeg);
         List<JourneySegmentResponse> segments = journeySegmentService.buildSegments(firstJourney);
         Integer walkingDurationMinutes = journeySegmentService.calculateWalkingDurationMinutes(firstJourney);
+        List<JourneyStopResponse> stops = journeyStopService.buildStops(firstTransitLeg);
 
         return new TripSummaryResponse(
                 fieldExtractor.secondsToMinutes(firstJourney.tripDuration()),
@@ -50,7 +50,8 @@ public class PlanningService {
                 firstJourney.interchanges(),
                 route,
                 insights,
-                segments
+                segments,
+                stops
         );
     }
 
