@@ -9,7 +9,6 @@ public record TripSummaryResponse(
         Integer transfers,
         TripRouteResponse route,
         TripInsightResponse insights,
-        List<JourneySegmentResponse> segments,
-        List<JourneyStopResponse> stops
+        List<JourneySegmentResponse> segments
 ) {
 }
