@@ -18,18 +18,20 @@ public class PlanningService {
     private final PlanningFieldExtractor fieldExtractor;
     private final JourneySegmentService journeySegmentService;
     private final JourneyStopService journeyStopService;
+    private final JourneyMapLineCreatorService journeyMapLineCreatorService;
 
     public PlanningService(
             TrafiklabJourneyClient trafiklabJourneyClient,
             JourneySelectionService journeySelectionService,
             PlanningFieldExtractor fieldExtractor,
-            JourneySegmentService journeySegmentService, JourneyStopService journeyStopService
+            JourneySegmentService journeySegmentService, JourneyStopService journeyStopService, JourneyMapLineCreatorService journeyMapLineCreatorService
     ) {
         this.trafiklabJourneyClient = trafiklabJourneyClient;
         this.journeySelectionService = journeySelectionService;
         this.fieldExtractor = fieldExtractor;
         this.journeySegmentService = journeySegmentService;
         this.journeyStopService = journeyStopService;
+        this.journeyMapLineCreatorService = journeyMapLineCreatorService;
     }
 
     public TripSummaryResponse getTestTrip() {
@@ -42,6 +44,7 @@ public class PlanningService {
         List<JourneySegmentResponse> segments = journeySegmentService.buildSegments(firstJourney);
         Integer walkingDurationMinutes = journeySegmentService.calculateWalkingDurationMinutes(firstJourney);
         List<JourneyStopResponse> stops = journeyStopService.buildStops(firstTransitLeg);
+        List<CoordinateResponse> polyline = journeyMapLineCreatorService.buildPolyline(firstJourney);
 
         return new TripSummaryResponse(
                 fieldExtractor.secondsToMinutes(firstJourney.tripDuration()),
@@ -51,7 +54,8 @@ public class PlanningService {
                 route,
                 insights,
                 segments,
-                stops
+                stops,
+                polyline
         );
     }
 
