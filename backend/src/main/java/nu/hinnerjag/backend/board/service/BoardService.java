@@ -8,7 +8,6 @@ import nu.hinnerjag.backend.external.trafiklab.transport.TrafiklabTransportClien
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDepartureDto;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDeparturesResponse;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSiteDto;
-import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSitesResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -39,16 +38,18 @@ public class BoardService {
     }
 
     public NearbyBoardResponse getNearbyBoards(Double userLat, Double userLng) {
-        TransportSitesResponse sitesResponse = trafiklabTransportClient.fetchSites();
-        List<TransportSiteDto> sites = sitesResponse != null && sitesResponse.sites() != null
-                ? sitesResponse.sites()
-                : List.of();
+        List<TransportSiteDto> sites = trafiklabTransportClient.fetchSites();
+
+        if (sites == null) {
+            sites = List.of();
+        }
 
         List<SiteWithDistance> nearbySites = sites.stream()
-                .filter(site -> site != null && site.lat() != null && site.lon() != null)
+                .filter(site -> site != null && site.siteId() != null)
+                .filter(site -> site.lat() != null && site.lon() != null)
                 .map(site -> new SiteWithDistance(site, distanceMeters(userLat, userLng, site.lat(), site.lon())))
                 .sorted(Comparator.comparingDouble(SiteWithDistance::distanceMeters))
-                .limit(12)
+                .limit(20)
                 .toList();
 
         NearbyBoardSiteResponse nearestMetro = findNearestMetro(nearbySites);
@@ -68,7 +69,9 @@ public class BoardService {
                 continue;
             }
 
-            TransportDeparturesResponse response = trafiklabTransportClient.fetchDeparturesBySiteId(candidate.site().siteId());
+            TransportDeparturesResponse response =
+                    trafiklabTransportClient.fetchDeparturesBySiteIdSafely(candidate.site().siteId());
+
             List<BoardDepartureResponse> departures = mapDepartures(response);
             List<BoardDepartureResponse> metroDepartures = departures.stream()
                     .filter(this::isMetroDeparture)
@@ -96,7 +99,9 @@ public class BoardService {
                 continue;
             }
 
-            TransportDeparturesResponse response = trafiklabTransportClient.fetchDeparturesBySiteId(candidate.site().siteId());
+            TransportDeparturesResponse response =
+                    trafiklabTransportClient.fetchDeparturesBySiteIdSafely(candidate.site().siteId());
+
             List<BoardDepartureResponse> departures = mapDepartures(response);
             List<BoardDepartureResponse> busDepartures = departures.stream()
                     .filter(this::isBusDeparture)
@@ -162,11 +167,13 @@ public class BoardService {
     }
 
     private boolean isMetroDeparture(BoardDepartureResponse departure) {
-        return departure.line() != null && METRO_LINES.contains(departure.line());
+        return "METRO".equalsIgnoreCase(departure.transportMode())
+                || (departure.line() != null && METRO_LINES.contains(departure.line()));
     }
 
     private boolean isBusDeparture(BoardDepartureResponse departure) {
-        return departure.line() != null && !METRO_LINES.contains(departure.line());
+        return "BUS".equalsIgnoreCase(departure.transportMode())
+                || (departure.line() != null && !METRO_LINES.contains(departure.line()));
     }
 
     private double distanceMeters(double userLat, double userLng, double siteLat, double siteLng) {

@@ -1,9 +1,13 @@
 package nu.hinnerjag.backend.external.trafiklab.transport;
 
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDeparturesResponse;
-import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSitesResponse;
+import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSiteDto;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+
+import java.util.List;
 
 @Component
 public class TrafiklabTransportClient {
@@ -20,12 +24,20 @@ public class TrafiklabTransportClient {
                 .body(TransportDeparturesResponse.class);
     }
 
-    public TransportSitesResponse fetchSites() {
+    public TransportDeparturesResponse fetchDeparturesBySiteIdSafely(Integer siteId) {
+        try {
+            return fetchDeparturesBySiteId(siteId);
+        } catch (RestClientException exception) {
+            return null;
+        }
+    }
+
+    public List<TransportSiteDto> fetchSites() {
         String url = BASE_URL + "/sites?expand=true";
 
         return restClient.get()
                 .uri(url)
                 .retrieve()
-                .body(TransportSitesResponse.class);
+                .body(new ParameterizedTypeReference<List<TransportSiteDto>>() {});
     }
 }
