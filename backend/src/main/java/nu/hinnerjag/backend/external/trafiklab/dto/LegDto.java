@@ -9,6 +9,7 @@ public record LegDto(
         TransportationDto transportation,
         List<InfoDto> infos,
         List<StopSequenceDto> stopSequence,
+        List<List<Double>> coords,
         Boolean isRealtimeControlled
 ) {
 }
