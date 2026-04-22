@@ -2,12 +2,15 @@ package nu.hinnerjag.backend.planning;
 
 import nu.hinnerjag.backend.external.trafiklab.TrafiklabJourneyClient;
 import nu.hinnerjag.backend.external.trafiklab.dto.*;
+import nu.hinnerjag.backend.planning.dto.TripInsightResponse;
 import nu.hinnerjag.backend.planning.dto.TripRouteResponse;
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class PlanningService {
@@ -48,11 +51,28 @@ public class PlanningService {
                 extractPlatform(firstTransitLeg.origin())
         );
 
+        TripInsightResponse insights = new TripInsightResponse(
+
+                firstTransitLeg.isRealtimeControlled(),
+
+                extractOccupancy(firstTransitLeg.origin()),
+
+                extractAlerts(firstTransitLeg)
+
+        );
+
         return new TripSummaryResponse(
+
                 secondsToMinutes(firstJourney.tripDuration()),
+
                 secondsToMinutes(firstJourney.tripRtDuration()),
+
                 firstJourney.interchanges(),
-                route
+
+                route,
+
+                insights
+
         );
     }
 
@@ -118,5 +138,34 @@ public class PlanningService {
         }
 
         return platform;
+    }
+
+    private String extractOccupancy(PlaceDto place) {
+        if (place == null || place.properties() == null) {
+            return null;
+        }
+        return place.properties().get("occupancy");
+    }
+
+    private List<String> extractAlerts(LegDto leg) {
+        List<String> alerts = new ArrayList<>();
+
+        if (leg == null || leg.infos() == null) {
+            return alerts;
+        }
+
+        for (InfoDto info : leg.infos()) {
+            if (info == null || info.infoLinks() == null) {
+                continue;
+            }
+
+            for (InfoLinkDto link : info.infoLinks()) {
+                if (link != null && link.title() != null && !link.title().isBlank()) {
+                    alerts.add(link.title());
+                }
+            }
+        }
+
+        return alerts;
     }
 }
