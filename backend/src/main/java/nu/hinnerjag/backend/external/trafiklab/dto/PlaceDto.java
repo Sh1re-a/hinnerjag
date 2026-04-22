@@ -7,6 +7,6 @@ public record PlaceDto(
         String departureTimeEstimated,
         String arrivalTimeEstimated,
         Map<String, String> properties,
-        ParentPlaceDto parent,
+        ParentPlaceDto parent
 ) {
 }
