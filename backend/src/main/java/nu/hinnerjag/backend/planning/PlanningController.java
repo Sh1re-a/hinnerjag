@@ -1,6 +1,7 @@
 package nu.hinnerjag.backend.planning;
 
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
+import nu.hinnerjag.backend.planning.service.PlanningService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
