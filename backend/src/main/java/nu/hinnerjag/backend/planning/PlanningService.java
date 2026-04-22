@@ -4,6 +4,7 @@ import nu.hinnerjag.backend.external.trafiklab.TrafiklabJourneyClient;
 import nu.hinnerjag.backend.external.trafiklab.dto.JourneyDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
 import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
+import nu.hinnerjag.backend.external.trafiklab.dto.TransportationDto;
 import nu.hinnerjag.backend.planning.dto.TripRouteResponse;
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
 import org.springframework.stereotype.Service;
@@ -36,13 +37,14 @@ public class PlanningService {
         }
 
         LegDto firstLeg = firstJourney.legs().get(0);
+        TransportationDto transportation = firstLeg.transportation();
 
         TripRouteResponse route = new TripRouteResponse(
-                formatTime(firstLeg.origin().departureTimeEstimated()),
-                formatTime(firstLeg.destination().arrivalTimeEstimated()),
-                firstLeg.transportation().product().name(),
-                firstLeg.transportation().disassembledName(),
-                firstLeg.transportation().destination().name()
+                formatTime(firstLeg.origin() != null ? firstLeg.origin().departureTimeEstimated() : null),
+                formatTime(firstLeg.destination() != null ? firstLeg.destination().arrivalTimeEstimated() : null),
+                transportation != null && transportation.product() != null ? transportation.product().name() : null,
+                transportation != null ? transportation.disassembledName() : null,
+                transportation != null && transportation.destination() != null ? transportation.destination().name() : "Unknown"
         );
 
         return new TripSummaryResponse(
