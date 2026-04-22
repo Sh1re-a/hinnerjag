@@ -1,5 +1,6 @@
 package nu.hinnerjag.backend.external.trafiklab;
 
+import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -8,7 +9,7 @@ public class TrafiklabJourneyClient {
 
     private final RestClient restClient = RestClient.create();
 
-    public String fetchTestTrip() {
+    public JourneyPlannerResponse fetchTestTrip() {
         String url = "https://journeyplanner.integration.sl.se/v2/trips" +
                 "?type_origin=coord" +
                 "&name_origin=18.082494:59.257932:WGS84[dd.ddddd]" +
@@ -22,6 +23,6 @@ public class TrafiklabJourneyClient {
         return restClient.get()
                 .uri(url)
                 .retrieve()
-                .body(String.class);
+                .body(JourneyPlannerResponse.class);
     }
 }
