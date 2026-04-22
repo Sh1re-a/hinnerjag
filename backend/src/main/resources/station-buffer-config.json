@@ -1,0 +1,46 @@
+{
+  "defaultMetroBufferMinutes": 3,
+  "defaultMetroReason": "Vanlig tunnelbanestation med normal marginal till plattform",
+  "stations": {
+    "t-centralen": {
+      "minutes": 6,
+      "reason": "Stor bytespunkt med flera trafikslag, hög belastning och långa förflyttningar"
+    },
+    "stockholm city": {
+      "minutes": 6,
+      "reason": "Djup pendeltågsstation under city med stora passagerarflöden"
+    },
+    "odenplan": {
+      "minutes": 5,
+      "reason": "Stor bytespunkt mellan pendeltåg och tunnelbana med djup station"
+    },
+    "slussen": {
+      "minutes": 5,
+      "reason": "Komplex bytespunkt med ombyggnad, nivåskillnader och längre gångvägar"
+    },
+    "gullmarsplan": {
+      "minutes": 4,
+      "reason": "Stor bytespunkt mellan buss och tunnelbana"
+    },
+    "kungsträdgården": {
+      "minutes": 5,
+      "reason": "Djup station med lång vertikal förflyttning"
+    },
+    "rådhuset": {
+      "minutes": 4,
+      "reason": "Djup blålinjestation med långa rulltrappor"
+    },
+    "stadshagen": {
+      "minutes": 4,
+      "reason": "Djup blålinjestation med långa rulltrappor"
+    },
+    "solna centrum": {
+      "minutes": 4,
+      "reason": "Djup blålinjestation med längre väg till plattform"
+    },
+    "tekniska högskolan": {
+      "minutes": 4,
+      "reason": "Långa gångvägar beroende på uppgång"
+    }
+  }
+}
