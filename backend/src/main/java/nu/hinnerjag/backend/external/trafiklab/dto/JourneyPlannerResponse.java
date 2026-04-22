@@ -1,6 +1,8 @@
 package nu.hinnerjag.backend.external.trafiklab.dto;
 
-public class JourneyPlannerResponse (
-        List<JourneyDTO> journeys
+import java.util.List;
+
+public record JourneyPlannerResponse (
+        List<JourneyDto> journeys
 ){
 }
