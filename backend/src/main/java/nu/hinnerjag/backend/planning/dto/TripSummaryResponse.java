@@ -5,6 +5,7 @@ import java.util.List;
 public record TripSummaryResponse(
         Integer plannedDurationMinutes,
         Integer realtimeDurationMinutes,
+        Integer walkingDurationMinutes,
         Integer transfers,
         TripRouteResponse route,
         TripInsightResponse insights,
