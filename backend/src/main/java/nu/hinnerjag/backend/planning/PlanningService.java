@@ -232,10 +232,12 @@ public class PlanningService {
         }
 
         for (LegDto leg : journey.legs()) {
-            if (isTransitLeg(leg)) {
-                segments.add(buildTransitSegment(leg));
-            } else {
-                segments.add(buildWalkSegment(leg));
+            JourneySegmentResponse segment = isTransitLeg(leg)
+                    ? buildTransitSegment(leg)
+                    : buildWalkSegment(leg);
+
+            if (shouldIncludeSegment(segment)) {
+                segments.add(segment);
             }
         }
 
@@ -284,5 +286,29 @@ public class PlanningService {
         }
 
         return totalWalkingSeconds / 60;
+    }
+
+    private boolean shouldIncludeSegment(JourneySegmentResponse segment) {
+        if (segment == null) {
+            return false;
+        }
+
+        if (segment.from() == null || segment.from().isBlank()) {
+            return false;
+        }
+
+        if (segment.to() == null || segment.to().isBlank()) {
+            return false;
+        }
+
+        if (segment.durationMinutes() == null || segment.durationMinutes() <= 0) {
+            return false;
+        }
+
+        if (segment.from().equalsIgnoreCase(segment.to())) {
+            return false;
+        }
+
+        return true;
     }
 }
