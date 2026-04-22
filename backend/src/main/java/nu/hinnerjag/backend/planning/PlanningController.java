@@ -3,6 +3,7 @@ package nu.hinnerjag.backend.planning;
 import nu.hinnerjag.backend.planning.dto.JourneyPlanRequest;
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
 import nu.hinnerjag.backend.planning.service.PlanningService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,12 +17,12 @@ public class PlanningController {
     }
 
     @GetMapping("/test-trip")
-    public TripSummaryResponse testTrip() {
-        return planningService.getTestTrip();
+    public ResponseEntity<TripSummaryResponse> testTrip() {
+        return ResponseEntity.ok(planningService.getTestTrip());
     }
 
     @PostMapping("/journey")
-    public TripSummaryResponse planJourney(@RequestBody JourneyPlanRequest request) {
-        return planningService.planJourney(request);
+    public ResponseEntity<TripSummaryResponse> planJourney(@RequestBody JourneyPlanRequest request) {
+        return ResponseEntity.ok(planningService.planJourney(request));
     }
 }

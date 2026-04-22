@@ -49,8 +49,14 @@ public class JourneyTimingService {
             return null;
         }
 
-        long minutes = Duration.between(ZonedDateTime.now(STOCKHOLM_ZONE), leaveAt).toMinutes();
-        return (int) minutes;
+        Duration duration = Duration.between(ZonedDateTime.now(STOCKHOLM_ZONE), leaveAt);
+
+        if (duration.isNegative() || duration.isZero()) {
+            return 0;
+        }
+
+        long seconds = duration.getSeconds();
+        return (int) Math.ceil(seconds / 60.0);
     }
 
     public Integer calculateRealisticDurationMinutes(JourneyDto journey) {
