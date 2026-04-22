@@ -42,4 +42,23 @@ public class JourneySelectionService {
         String mode = leg.transportation().product().name();
         return mode != null && !mode.equalsIgnoreCase(FOOTPATH_MODE);
     }
+    public LegDto findLastTransitLeg(JourneyDto journey) {
+        if (journey == null || journey.legs() == null || journey.legs().isEmpty()) {
+            throw new IllegalStateException("No legs returned from Trafiklab");
+        }
+
+        LegDto lastTransitLeg = null;
+
+        for (LegDto leg : journey.legs()) {
+            if (isTransitLeg(leg)) {
+                lastTransitLeg = leg;
+            }
+        }
+
+        if (lastTransitLeg != null) {
+            return lastTransitLeg;
+        }
+
+        return journey.legs().get(journey.legs().size() - 1);
+    }
 }
