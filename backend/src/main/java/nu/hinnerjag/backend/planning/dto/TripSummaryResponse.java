@@ -4,6 +4,7 @@ public record TripSummaryResponse(
         Integer plannedDurationMinutes,
         Integer realtimeDurationMinutes,
         Integer transfers,
-        TripRouteResponse route
+        TripRouteResponse route,
+        TripInsightResponse insights
 ) {
 }
