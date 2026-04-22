@@ -23,7 +23,6 @@ public class BoardService {
 
     public BoardResponse getBoard(Integer siteId) {
         TransportDeparturesResponse response = trafiklabTransportClient.fetchDeparturesBySiteId(siteId);
-
         List<BoardDepartureResponse> departures = mapDepartures(response);
 
         return new BoardResponse(siteId, departures);
@@ -44,7 +43,7 @@ public class BoardService {
             result.add(new BoardDepartureResponse(
                     departure.line() != null ? departure.line().designation() : null,
                     extractDestination(departure),
-                    departure.display() != null ? departure.display().time() : null,
+                    departure.display(),
                     departure.line() != null ? departure.line().transportMode() : null
             ));
 
@@ -57,12 +56,12 @@ public class BoardService {
     }
 
     private String extractDestination(TransportDepartureDto departure) {
-        if (departure.destination() != null && departure.destination().value() != null) {
-            return departure.destination().value();
+        if (departure.destination() != null && !departure.destination().isBlank()) {
+            return departure.destination();
         }
 
-        if (departure.journeyDirection() != null && departure.journeyDirection().value() != null) {
-            return departure.journeyDirection().value();
+        if (departure.direction() != null && !departure.direction().isBlank()) {
+            return departure.direction();
         }
 
         return null;
