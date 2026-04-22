@@ -1,6 +1,7 @@
 package nu.hinnerjag.backend.external.trafiklab.transport;
 
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDeparturesResponse;
+import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSitesResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -17,5 +18,14 @@ public class TrafiklabTransportClient {
                 .uri(url)
                 .retrieve()
                 .body(TransportDeparturesResponse.class);
+    }
+
+    public TransportSitesResponse fetchSites() {
+        String url = BASE_URL + "/sites?expand=true";
+
+        return restClient.get()
+                .uri(url)
+                .retrieve()
+                .body(TransportSitesResponse.class);
     }
 }
