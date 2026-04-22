@@ -36,12 +36,13 @@ public class PlanningService {
             throw new IllegalStateException("No legs returned from Trafiklab");
         }
 
-        LegDto firstLeg = firstJourney.legs().get(0);
-        TransportationDto transportation = firstLeg.transportation();
+        LegDto firstTransitLeg = findFirstTransitLeg(firstJourney);
+
+        TransportationDto transportation = firstTransitLeg.transportation();
 
         TripRouteResponse route = new TripRouteResponse(
-                formatTime(firstLeg.origin() != null ? firstLeg.origin().departureTimeEstimated() : null),
-                formatTime(firstLeg.destination() != null ? firstLeg.destination().arrivalTimeEstimated() : null),
+                formatTime(firstTransitLeg.origin() != null ? firstTransitLeg.origin().departureTimeEstimated() : null),
+                formatTime(firstTransitLeg.destination() != null ? firstTransitLeg.destination().arrivalTimeEstimated() : null),
                 transportation != null && transportation.product() != null ? transportation.product().name() : null,
                 transportation != null ? transportation.disassembledName() : null,
                 transportation != null && transportation.destination() != null ? transportation.destination().name() : "Unknown"
@@ -53,6 +54,25 @@ public class PlanningService {
                 firstJourney.interchanges(),
                 route
         );
+    }
+
+    private LegDto findFirstTransitLeg(JourneyDto journey) {
+        for (LegDto leg : journey.legs()) {
+            if (leg.transportation() == null) {
+                continue;
+            }
+
+            if (leg.transportation().product() == null) {
+                continue;
+            }
+
+            String mode = leg.transportation().product().name();
+            if (mode != null && !mode.equalsIgnoreCase("footpath")) {
+                return leg;
+            }
+        }
+
+        return journey.legs().get(0);
     }
 
     private Integer secondsToMinutes(Integer seconds) {
