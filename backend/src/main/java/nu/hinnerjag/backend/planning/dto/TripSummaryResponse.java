@@ -13,6 +13,7 @@ public record TripSummaryResponse(
         TripInsightResponse insights,
         List<JourneySegmentResponse> segments,
         List<JourneyStopResponse> stops,
-        List<CoordinateResponse> polyline
+        List<CoordinateResponse> polyline,
+        StationBufferResponse stationBuffer
 ) {
 }
