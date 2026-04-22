@@ -1,6 +1,7 @@
 package nu.hinnerjag.backend.board;
 
 import nu.hinnerjag.backend.board.dto.BoardResponse;
+import nu.hinnerjag.backend.board.dto.NearbyBoardResponse;
 import nu.hinnerjag.backend.board.service.BoardService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,5 +22,13 @@ public class BoardController {
     @GetMapping
     public ResponseEntity<BoardResponse> getBoard(@RequestParam Integer siteId) {
         return ResponseEntity.ok(boardService.getBoard(siteId));
+    }
+
+    @GetMapping("/nearby")
+    public ResponseEntity<NearbyBoardResponse> getNearbyBoards(
+            @RequestParam Double lat,
+            @RequestParam Double lng
+    ) {
+        return ResponseEntity.ok(boardService.getNearbyBoards(lat, lng));
     }
 }
