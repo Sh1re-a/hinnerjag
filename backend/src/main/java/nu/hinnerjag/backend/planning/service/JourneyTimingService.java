@@ -2,6 +2,7 @@ package nu.hinnerjag.backend.planning.service;
 
 import nu.hinnerjag.backend.external.trafiklab.dto.JourneyDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
+import nu.hinnerjag.backend.planning.dto.StationTimingResponse;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -15,11 +16,20 @@ public class JourneyTimingService {
 
     private static final ZoneId STOCKHOLM_ZONE = ZoneId.of("Europe/Stockholm");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final int GENERAL_BUFFER_MINUTES = 1;
 
     private final JourneySelectionService journeySelectionService;
+    private final PlanningFieldExtractor planningFieldExtractor;
+    private final StationBufferService stationBufferService;
 
-    public JourneyTimingService(JourneySelectionService journeySelectionService) {
+    public JourneyTimingService(
+            JourneySelectionService journeySelectionService,
+            PlanningFieldExtractor planningFieldExtractor,
+            StationBufferService stationBufferService
+    ) {
         this.journeySelectionService = journeySelectionService;
+        this.planningFieldExtractor = planningFieldExtractor;
+        this.stationBufferService = stationBufferService;
     }
 
     public String calculateLeaveAt(JourneyDto journey) {
@@ -43,6 +53,35 @@ public class JourneyTimingService {
         return (int) minutes;
     }
 
+    public Integer calculateRealisticDurationMinutes(JourneyDto journey) {
+        if (journey == null || journey.tripDuration() == null) {
+            return null;
+        }
+
+        int baseMinutes = journey.tripDuration() / 60;
+        StationTimingResponse stationTiming = getStationTiming(journey);
+
+        return baseMinutes
+                + stationTiming.boardingMinutes()
+                + stationTiming.arrivalMinutes()
+                + GENERAL_BUFFER_MINUTES;
+    }
+
+    public StationTimingResponse getStationTiming(JourneyDto journey) {
+        LegDto firstTransitLeg = journeySelectionService.findFirstTransitLeg(journey);
+        LegDto lastTransitLeg = journeySelectionService.findLastTransitLeg(journey);
+
+        StationBuffer boardingBuffer = getBoardingBuffer(firstTransitLeg);
+        StationBuffer arrivalBuffer = getArrivalBuffer(lastTransitLeg);
+
+        return new StationTimingResponse(
+                boardingBuffer.getMinutes(),
+                boardingBuffer.getReason(),
+                arrivalBuffer.getMinutes(),
+                arrivalBuffer.getReason()
+        );
+    }
+
     private ZonedDateTime calculateLeaveAtDateTime(JourneyDto journey) {
         if (journey == null || journey.legs() == null || journey.legs().isEmpty()) {
             return null;
@@ -61,10 +100,15 @@ public class JourneyTimingService {
 
         OffsetDateTime transitDeparture = OffsetDateTime.parse(departureIso);
         int accessWalkingMinutes = calculateAccessWalkingMinutes(journey, firstTransitLeg);
+        StationBuffer boardingBuffer = getBoardingBuffer(firstTransitLeg);
+
+        int totalMinutesBeforeDeparture = accessWalkingMinutes
+                + GENERAL_BUFFER_MINUTES
+                + boardingBuffer.getMinutes();
 
         return transitDeparture
                 .atZoneSameInstant(STOCKHOLM_ZONE)
-                .minusMinutes(accessWalkingMinutes);
+                .minusMinutes(totalMinutesBeforeDeparture);
     }
 
     private int calculateAccessWalkingMinutes(JourneyDto journey, LegDto firstTransitLeg) {
@@ -81,5 +125,23 @@ public class JourneyTimingService {
         }
 
         return totalWalkingSeconds / 60;
+    }
+
+    private StationBuffer getBoardingBuffer(LegDto firstTransitLeg) {
+        if (firstTransitLeg == null || firstTransitLeg.origin() == null) {
+            return StationBuffer.DEFAULT;
+        }
+
+        String stationName = planningFieldExtractor.extractPlaceName(firstTransitLeg.origin());
+        return stationBufferService.getBufferForStation(stationName);
+    }
+
+    private StationBuffer getArrivalBuffer(LegDto lastTransitLeg) {
+        if (lastTransitLeg == null || lastTransitLeg.destination() == null) {
+            return StationBuffer.DEFAULT;
+        }
+
+        String stationName = planningFieldExtractor.extractPlaceName(lastTransitLeg.destination());
+        return stationBufferService.getBufferForStation(stationName);
     }
 }
