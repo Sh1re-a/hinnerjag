@@ -1,10 +1,7 @@
 package nu.hinnerjag.backend.planning;
 
 import nu.hinnerjag.backend.external.trafiklab.TrafiklabJourneyClient;
-import nu.hinnerjag.backend.external.trafiklab.dto.JourneyDto;
-import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
-import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
-import nu.hinnerjag.backend.external.trafiklab.dto.TransportationDto;
+import nu.hinnerjag.backend.external.trafiklab.dto.*;
 import nu.hinnerjag.backend.planning.dto.TripRouteResponse;
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
 import org.springframework.stereotype.Service;
@@ -45,7 +42,10 @@ public class PlanningService {
                 formatTime(firstTransitLeg.destination() != null ? firstTransitLeg.destination().arrivalTimeEstimated() : null),
                 transportation != null && transportation.product() != null ? transportation.product().name() : null,
                 transportation != null ? transportation.disassembledName() : null,
-                transportation != null && transportation.destination() != null ? transportation.destination().name() : "Unknown"
+                transportation != null && transportation.destination() != null ? transportation.destination().name() : "Unknown",
+                extractPlaceName(firstTransitLeg.origin()),
+                extractPlaceName(firstTransitLeg.destination()),
+                extractPlatform(firstTransitLeg.origin())
         );
 
         return new TripSummaryResponse(
@@ -87,5 +87,36 @@ public class PlanningService {
             return null;
         }
         return OffsetDateTime.parse(isoDateTime).format(TIME_FORMATTER);
+    }
+    private String cleanStopName(String rawName) {
+        if (rawName == null) {
+            return null;
+        }
+        return rawName.replace(", Stockholm", "").trim();
+    }
+
+    private String extractPlaceName(PlaceDto place) {
+        if (place == null) {
+            return null;
+        }
+
+        if (place.parent() != null && place.parent().name() != null && !place.parent().name().isBlank()) {
+            return cleanStopName(place.parent().name());
+        }
+
+        return cleanStopName(place.name());
+    }
+
+    private String extractPlatform(PlaceDto place) {
+        if (place == null || place.properties() == null) {
+            return null;
+        }
+
+        String platform = place.properties().get("platformName");
+        if (platform == null || platform.isBlank()) {
+            platform = place.properties().get("platform");
+        }
+
+        return platform;
     }
 }
