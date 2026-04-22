@@ -26,6 +26,7 @@ public class PlanningService {
     private final JourneyStopService journeyStopService;
     private final JourneyMapLineCreatorService journeyMapLineCreatorService;
     private final JourneyRequestMapper journeyRequestMapper;
+    private final JourneyTimingService journeyTimingService;
 
     public PlanningService(
             TrafiklabJourneyClient trafiklabJourneyClient,
@@ -34,7 +35,7 @@ public class PlanningService {
             JourneySegmentService journeySegmentService,
             JourneyStopService journeyStopService,
             JourneyMapLineCreatorService journeyMapLineCreatorService,
-            JourneyRequestMapper journeyRequestMapper
+            JourneyRequestMapper journeyRequestMapper, JourneyTimingService journeyTimingService
     ) {
         this.trafiklabJourneyClient = trafiklabJourneyClient;
         this.journeySelectionService = journeySelectionService;
@@ -43,6 +44,7 @@ public class PlanningService {
         this.journeyStopService = journeyStopService;
         this.journeyMapLineCreatorService = journeyMapLineCreatorService;
         this.journeyRequestMapper = journeyRequestMapper;
+        this.journeyTimingService = journeyTimingService;
     }
 
     public TripSummaryResponse getTestTrip() {
@@ -67,10 +69,14 @@ public class PlanningService {
         List<JourneyStopResponse> stops = journeyStopService.buildStops(firstTransitLeg);
         List<CoordinateResponse> polyline = journeyMapLineCreatorService.buildPolyline(firstJourney);
 
+        String leaveAt = journeyTimingService.calculateLeaveAt(firstJourney);
+        Integer leaveInMinutes = journeyTimingService.calculateLeaveInMinutes(firstJourney);
         return new TripSummaryResponse(
                 fieldExtractor.secondsToMinutes(firstJourney.tripDuration()),
                 fieldExtractor.secondsToMinutes(firstJourney.tripRtDuration()),
                 walkingDurationMinutes,
+                leaveAt,
+                leaveInMinutes,
                 firstJourney.interchanges(),
                 route,
                 insights,
