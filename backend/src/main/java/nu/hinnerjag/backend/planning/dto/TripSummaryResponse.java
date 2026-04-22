@@ -6,6 +6,7 @@ public record TripSummaryResponse(
         Integer plannedDurationMinutes,
         Integer realtimeDurationMinutes,
         Integer walkingDurationMinutes,
+        Integer realisticDurationMinutes,
         String leaveAt,
         Integer leaveInMinutes,
         Integer transfers,
