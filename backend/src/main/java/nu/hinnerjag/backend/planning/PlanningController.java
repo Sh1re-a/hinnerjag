@@ -1,5 +1,6 @@
 package nu.hinnerjag.backend.planning;
 
+import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,7 +14,7 @@ public class PlanningController {
     }
 
     @GetMapping("/api/plans/test-trip")
-    public String testTrip() {
+    public TripSummaryResponse testTrip() {
         return planningService.getTestTrip();
     }
 }
