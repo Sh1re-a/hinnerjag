@@ -1,12 +1,9 @@
-package nu.hinnerjag.backend.planning;
+package nu.hinnerjag.backend.planning.service;
 
 import nu.hinnerjag.backend.external.trafiklab.TrafiklabJourneyClient;
-import nu.hinnerjag.backend.external.trafiklab.dto.InfoDto;
-import nu.hinnerjag.backend.external.trafiklab.dto.InfoLinkDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.JourneyDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
 import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
-import nu.hinnerjag.backend.external.trafiklab.dto.PlaceDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.TransportationDto;
 import nu.hinnerjag.backend.planning.dto.JourneySegmentResponse;
 import nu.hinnerjag.backend.planning.dto.TripInsightResponse;
@@ -14,301 +11,69 @@ import nu.hinnerjag.backend.planning.dto.TripRouteResponse;
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
 import org.springframework.stereotype.Service;
 
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class PlanningService {
 
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
-    private static final String FOOTPATH_MODE = "footpath";
-    private static final String DEFAULT_DIRECTION = "Unknown";
-
     private final TrafiklabJourneyClient trafiklabJourneyClient;
+    private final JourneySelectionService journeySelectionService;
+    private final PlanningFieldExtractor fieldExtractor;
+    private final JourneySegmentService journeySegmentService;
 
-    public PlanningService(TrafiklabJourneyClient trafiklabJourneyClient) {
+    public PlanningService(
+            TrafiklabJourneyClient trafiklabJourneyClient,
+            JourneySelectionService journeySelectionService,
+            PlanningFieldExtractor fieldExtractor,
+            JourneySegmentService journeySegmentService
+    ) {
         this.trafiklabJourneyClient = trafiklabJourneyClient;
+        this.journeySelectionService = journeySelectionService;
+        this.fieldExtractor = fieldExtractor;
+        this.journeySegmentService = journeySegmentService;
     }
 
     public TripSummaryResponse getTestTrip() {
         JourneyPlannerResponse response = trafiklabJourneyClient.fetchTestTrip();
-        JourneyDto firstJourney = extractFirstJourney(response);
-        LegDto firstTransitLeg = findFirstTransitLeg(firstJourney);
+        JourneyDto firstJourney = journeySelectionService.extractFirstJourney(response);
+        LegDto firstTransitLeg = journeySelectionService.findFirstTransitLeg(firstJourney);
 
         TripRouteResponse route = buildRoute(firstTransitLeg);
         TripInsightResponse insights = buildInsights(firstTransitLeg);
-        List<JourneySegmentResponse> segments = buildSegments(firstJourney);
-        Integer walkingDurationMinutes = calculateWalkingDurationMinutes(firstJourney);
+        List<JourneySegmentResponse> segments = journeySegmentService.buildSegments(firstJourney);
+        Integer walkingDurationMinutes = journeySegmentService.calculateWalkingDurationMinutes(firstJourney);
 
-        return buildTripSummary(firstJourney, walkingDurationMinutes, route, insights, segments);
-    }
-
-    private JourneyDto extractFirstJourney(JourneyPlannerResponse response) {
-        if (response == null || response.journeys() == null || response.journeys().isEmpty()) {
-            throw new IllegalStateException("No journeys returned from Trafiklab");
-        }
-
-        JourneyDto firstJourney = response.journeys().get(0);
-
-        if (firstJourney.legs() == null || firstJourney.legs().isEmpty()) {
-            throw new IllegalStateException("No legs returned from Trafiklab");
-        }
-
-        return firstJourney;
-    }
-
-    private LegDto findFirstTransitLeg(JourneyDto journey) {
-        for (LegDto leg : journey.legs()) {
-            if (!isTransitLeg(leg)) {
-                continue;
-            }
-            return leg;
-        }
-
-        return journey.legs().get(0);
-    }
-
-    private boolean isTransitLeg(LegDto leg) {
-        if (leg == null || leg.transportation() == null || leg.transportation().product() == null) {
-            return false;
-        }
-
-        String mode = leg.transportation().product().name();
-        return mode != null && !mode.equalsIgnoreCase(FOOTPATH_MODE);
-    }
-
-    private TripRouteResponse buildRoute(LegDto transitLeg) {
-        TransportationDto transportation = transitLeg.transportation();
-
-        return new TripRouteResponse(
-                formatTime(getDepartureTime(transitLeg)),
-                formatTime(getArrivalTime(transitLeg)),
-                extractMode(transportation),
-                extractLine(transportation),
-                extractDirection(transportation),
-                extractPlaceName(transitLeg.origin()),
-                extractPlaceName(transitLeg.destination()),
-                extractPlatform(transitLeg.origin())
-        );
-    }
-
-    private TripInsightResponse buildInsights(LegDto transitLeg) {
-        return new TripInsightResponse(
-                transitLeg.isRealtimeControlled(),
-                extractOccupancy(transitLeg.origin()),
-                extractAlerts(transitLeg)
-        );
-    }
-
-    private TripSummaryResponse buildTripSummary(
-            JourneyDto journey,
-            Integer walkingDurationMinutes,
-            TripRouteResponse route,
-            TripInsightResponse insights,
-            List<JourneySegmentResponse> segments
-    ) {
         return new TripSummaryResponse(
-                secondsToMinutes(journey.tripDuration()),
-                secondsToMinutes(journey.tripRtDuration()),
+                fieldExtractor.secondsToMinutes(firstJourney.tripDuration()),
+                fieldExtractor.secondsToMinutes(firstJourney.tripRtDuration()),
                 walkingDurationMinutes,
-                journey.interchanges(),
+                firstJourney.interchanges(),
                 route,
                 insights,
                 segments
         );
     }
 
-    private String getDepartureTime(LegDto leg) {
-        return leg.origin() != null ? leg.origin().departureTimeEstimated() : null;
-    }
+    private TripRouteResponse buildRoute(LegDto transitLeg) {
+        TransportationDto transportation = transitLeg.transportation();
 
-    private String getArrivalTime(LegDto leg) {
-        return leg.destination() != null ? leg.destination().arrivalTimeEstimated() : null;
-    }
-
-    private String extractMode(TransportationDto transportation) {
-        if (transportation == null || transportation.product() == null) {
-            return null;
-        }
-        return transportation.product().name();
-    }
-
-    private String extractLine(TransportationDto transportation) {
-        if (transportation == null) {
-            return null;
-        }
-        return transportation.disassembledName();
-    }
-
-    private String extractDirection(TransportationDto transportation) {
-        if (transportation == null || transportation.destination() == null) {
-            return DEFAULT_DIRECTION;
-        }
-        return transportation.destination().name();
-    }
-
-    private Integer secondsToMinutes(Integer seconds) {
-        if (seconds == null) {
-            return null;
-        }
-        return seconds / 60;
-    }
-
-    private String formatTime(String isoDateTime) {
-        if (isoDateTime == null || isoDateTime.isBlank()) {
-            return null;
-        }
-        return OffsetDateTime.parse(isoDateTime).format(TIME_FORMATTER);
-    }
-
-    private String cleanStopName(String rawName) {
-        if (rawName == null) {
-            return null;
-        }
-        return rawName.replace(", Stockholm", "").trim();
-    }
-
-    private String extractPlaceName(PlaceDto place) {
-        if (place == null) {
-            return null;
-        }
-
-        if (place.parent() != null && place.parent().name() != null && !place.parent().name().isBlank()) {
-            return cleanStopName(place.parent().name());
-        }
-
-        return cleanStopName(place.name());
-    }
-
-    private String extractPlatform(PlaceDto place) {
-        if (place == null || place.properties() == null) {
-            return null;
-        }
-
-        String platform = place.properties().get("platformName");
-        if (platform == null || platform.isBlank()) {
-            platform = place.properties().get("platform");
-        }
-
-        return platform;
-    }
-
-    private String extractOccupancy(PlaceDto place) {
-        if (place == null || place.properties() == null) {
-            return null;
-        }
-        return place.properties().get("occupancy");
-    }
-
-    private List<String> extractAlerts(LegDto leg) {
-        List<String> alerts = new ArrayList<>();
-
-        if (leg == null || leg.infos() == null) {
-            return alerts;
-        }
-
-        for (InfoDto info : leg.infos()) {
-            if (info == null || info.infoLinks() == null) {
-                continue;
-            }
-
-            for (InfoLinkDto link : info.infoLinks()) {
-                if (link != null && link.title() != null && !link.title().isBlank()) {
-                    alerts.add(link.title());
-                }
-            }
-        }
-
-        return alerts;
-    }
-
-    private List<JourneySegmentResponse> buildSegments(JourneyDto journey) {
-        List<JourneySegmentResponse> segments = new ArrayList<>();
-
-        if (journey == null || journey.legs() == null) {
-            return segments;
-        }
-
-        for (LegDto leg : journey.legs()) {
-            JourneySegmentResponse segment = isTransitLeg(leg)
-                    ? buildTransitSegment(leg)
-                    : buildWalkSegment(leg);
-
-            if (shouldIncludeSegment(segment)) {
-                segments.add(segment);
-            }
-        }
-
-        return segments;
-    }
-
-    private JourneySegmentResponse buildTransitSegment(LegDto leg) {
-        TransportationDto transportation = leg.transportation();
-
-        return new JourneySegmentResponse(
-                "TRANSIT",
-                extractPlaceName(leg.origin()),
-                extractPlaceName(leg.destination()),
-                secondsToMinutes(leg.duration()),
-                extractMode(transportation),
-                extractLine(transportation),
-                extractDirection(transportation),
-                extractPlatform(leg.origin())
+        return new TripRouteResponse(
+                fieldExtractor.extractDepartureTime(transitLeg),
+                fieldExtractor.extractArrivalTime(transitLeg),
+                fieldExtractor.extractMode(transportation),
+                fieldExtractor.extractLine(transportation),
+                fieldExtractor.extractDirection(transportation),
+                fieldExtractor.extractPlaceName(transitLeg.origin()),
+                fieldExtractor.extractPlaceName(transitLeg.destination()),
+                fieldExtractor.extractPlatform(transitLeg.origin())
         );
     }
 
-    private JourneySegmentResponse buildWalkSegment(LegDto leg) {
-        return new JourneySegmentResponse(
-                "WALK",
-                extractPlaceName(leg.origin()),
-                extractPlaceName(leg.destination()),
-                secondsToMinutes(leg.duration()),
-                "Walk",
-                null,
-                null,
-                null
+    private TripInsightResponse buildInsights(LegDto transitLeg) {
+        return new TripInsightResponse(
+                transitLeg.isRealtimeControlled(),
+                fieldExtractor.extractOccupancy(transitLeg.origin()),
+                fieldExtractor.extractAlerts(transitLeg)
         );
-    }
-
-    private Integer calculateWalkingDurationMinutes(JourneyDto journey) {
-        if (journey == null || journey.legs() == null) {
-            return 0;
-        }
-
-        int totalWalkingSeconds = 0;
-
-        for (LegDto leg : journey.legs()) {
-            if (!isTransitLeg(leg) && leg.duration() != null) {
-                totalWalkingSeconds += leg.duration();
-            }
-        }
-
-        return totalWalkingSeconds / 60;
-    }
-
-    private boolean shouldIncludeSegment(JourneySegmentResponse segment) {
-        if (segment == null) {
-            return false;
-        }
-
-        if (segment.from() == null || segment.from().isBlank()) {
-            return false;
-        }
-
-        if (segment.to() == null || segment.to().isBlank()) {
-            return false;
-        }
-
-        if (segment.durationMinutes() == null || segment.durationMinutes() <= 0) {
-            return false;
-        }
-
-        if (segment.from().equalsIgnoreCase(segment.to())) {
-            return false;
-        }
-
-        return true;
     }
 }
