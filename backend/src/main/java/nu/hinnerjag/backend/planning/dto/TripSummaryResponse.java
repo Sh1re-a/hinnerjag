@@ -7,7 +7,7 @@ public record TripSummaryResponse(
         Integer realtimeDurationMinutes,
         Integer transfers,
         TripRouteResponse route,
-        TripInsightResponse insights
-        List<JourneySegmentResponse>segments
+        TripInsightResponse insights,
+        List<JourneySegmentResponse> segments
 ) {
 }
