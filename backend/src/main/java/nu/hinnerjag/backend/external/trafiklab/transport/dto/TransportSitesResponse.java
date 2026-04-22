@@ -1,4 +1,4 @@
-package nu.hinnerjag.backend.board.dto;
+package nu.hinnerjag.backend.external.trafiklab.transport.dto;
 
 import java.util.List;
 
