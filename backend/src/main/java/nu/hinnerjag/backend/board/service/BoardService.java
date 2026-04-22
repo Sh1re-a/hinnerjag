@@ -18,7 +18,8 @@ import java.util.Set;
 @Service
 public class BoardService {
 
-    private static final int MAX_DEPARTURES = 5;
+    private static final int MAX_FILTERED_DEPARTURES = 3;
+    private static final int MAX_SOURCE_DEPARTURES = 15;
     private static final int MAX_BUS_STOPS = 3;
     private static final double BUS_RADIUS_METERS = 300.0;
     private static final double METRO_RADIUS_METERS = 1200.0;
@@ -75,7 +76,7 @@ public class BoardService {
             List<BoardDepartureResponse> departures = mapDepartures(response);
             List<BoardDepartureResponse> metroDepartures = departures.stream()
                     .filter(this::isMetroDeparture)
-                    .limit(3)
+                    .limit(MAX_FILTERED_DEPARTURES)
                     .toList();
 
             if (!metroDepartures.isEmpty()) {
@@ -111,7 +112,7 @@ public class BoardService {
             List<BoardDepartureResponse> departures = mapDepartures(response);
             List<BoardDepartureResponse> busDepartures = departures.stream()
                     .filter(this::isBusDeparture)
-                    .limit(3)
+                    .limit(MAX_FILTERED_DEPARTURES)
                     .toList();
 
             if (busDepartures.isEmpty()) {
@@ -133,7 +134,6 @@ public class BoardService {
         return busStops;
     }
 
-
     private List<BoardDepartureResponse> mapDepartures(TransportDeparturesResponse response) {
         List<BoardDepartureResponse> result = new ArrayList<>();
 
@@ -153,13 +153,14 @@ public class BoardService {
                     departure.line() != null ? departure.line().transportMode() : null
             ));
 
-            if (result.size() == MAX_DEPARTURES) {
+            if (result.size() == MAX_SOURCE_DEPARTURES) {
                 break;
             }
         }
 
         return result;
     }
+
 
     private String extractDestination(TransportDepartureDto departure) {
         if (departure.destination() != null && !departure.destination().isBlank()) {
