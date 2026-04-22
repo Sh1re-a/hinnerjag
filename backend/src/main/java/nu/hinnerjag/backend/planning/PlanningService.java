@@ -1,7 +1,13 @@
 package nu.hinnerjag.backend.planning;
 
 import nu.hinnerjag.backend.external.trafiklab.TrafiklabJourneyClient;
-import nu.hinnerjag.backend.external.trafiklab.dto.*;
+import nu.hinnerjag.backend.external.trafiklab.dto.InfoDto;
+import nu.hinnerjag.backend.external.trafiklab.dto.InfoLinkDto;
+import nu.hinnerjag.backend.external.trafiklab.dto.JourneyDto;
+import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
+import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
+import nu.hinnerjag.backend.external.trafiklab.dto.PlaceDto;
+import nu.hinnerjag.backend.external.trafiklab.dto.TransportationDto;
 import nu.hinnerjag.backend.planning.dto.TripInsightResponse;
 import nu.hinnerjag.backend.planning.dto.TripRouteResponse;
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
@@ -16,6 +22,8 @@ import java.util.List;
 public class PlanningService {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final String FOOTPATH_MODE = "footpath";
+    private static final String DEFAULT_DIRECTION = "Unknown";
 
     private final TrafiklabJourneyClient trafiklabJourneyClient;
 
@@ -25,7 +33,16 @@ public class PlanningService {
 
     public TripSummaryResponse getTestTrip() {
         JourneyPlannerResponse response = trafiklabJourneyClient.fetchTestTrip();
+        JourneyDto firstJourney = extractFirstJourney(response);
+        LegDto firstTransitLeg = findFirstTransitLeg(firstJourney);
 
+        TripRouteResponse route = buildRoute(firstTransitLeg);
+        TripInsightResponse insights = buildInsights(firstTransitLeg);
+
+        return buildTripSummary(firstJourney, route, insights);
+    }
+
+    private JourneyDto extractFirstJourney(JourneyPlannerResponse response) {
         if (response == null || response.journeys() == null || response.journeys().isEmpty()) {
             throw new IllegalStateException("No journeys returned from Trafiklab");
         }
@@ -36,63 +53,93 @@ public class PlanningService {
             throw new IllegalStateException("No legs returned from Trafiklab");
         }
 
-        LegDto firstTransitLeg = findFirstTransitLeg(firstJourney);
-
-        TransportationDto transportation = firstTransitLeg.transportation();
-
-        TripRouteResponse route = new TripRouteResponse(
-                formatTime(firstTransitLeg.origin() != null ? firstTransitLeg.origin().departureTimeEstimated() : null),
-                formatTime(firstTransitLeg.destination() != null ? firstTransitLeg.destination().arrivalTimeEstimated() : null),
-                transportation != null && transportation.product() != null ? transportation.product().name() : null,
-                transportation != null ? transportation.disassembledName() : null,
-                transportation != null && transportation.destination() != null ? transportation.destination().name() : "Unknown",
-                extractPlaceName(firstTransitLeg.origin()),
-                extractPlaceName(firstTransitLeg.destination()),
-                extractPlatform(firstTransitLeg.origin())
-        );
-
-        TripInsightResponse insights = new TripInsightResponse(
-
-                firstTransitLeg.isRealtimeControlled(),
-
-                extractOccupancy(firstTransitLeg.origin()),
-
-                extractAlerts(firstTransitLeg)
-
-        );
-
-        return new TripSummaryResponse(
-
-                secondsToMinutes(firstJourney.tripDuration()),
-
-                secondsToMinutes(firstJourney.tripRtDuration()),
-
-                firstJourney.interchanges(),
-
-                route,
-
-                insights
-
-        );
+        return firstJourney;
     }
 
     private LegDto findFirstTransitLeg(JourneyDto journey) {
         for (LegDto leg : journey.legs()) {
-            if (leg.transportation() == null) {
+            if (!isTransitLeg(leg)) {
                 continue;
             }
-
-            if (leg.transportation().product() == null) {
-                continue;
-            }
-
-            String mode = leg.transportation().product().name();
-            if (mode != null && !mode.equalsIgnoreCase("footpath")) {
-                return leg;
-            }
+            return leg;
         }
 
         return journey.legs().get(0);
+    }
+
+    private boolean isTransitLeg(LegDto leg) {
+        if (leg == null || leg.transportation() == null || leg.transportation().product() == null) {
+            return false;
+        }
+
+        String mode = leg.transportation().product().name();
+        return mode != null && !mode.equalsIgnoreCase(FOOTPATH_MODE);
+    }
+
+    private TripRouteResponse buildRoute(LegDto transitLeg) {
+        TransportationDto transportation = transitLeg.transportation();
+
+        return new TripRouteResponse(
+                formatTime(getDepartureTime(transitLeg)),
+                formatTime(getArrivalTime(transitLeg)),
+                extractMode(transportation),
+                extractLine(transportation),
+                extractDirection(transportation),
+                extractPlaceName(transitLeg.origin()),
+                extractPlaceName(transitLeg.destination()),
+                extractPlatform(transitLeg.origin())
+        );
+    }
+
+    private TripInsightResponse buildInsights(LegDto transitLeg) {
+        return new TripInsightResponse(
+                transitLeg.isRealtimeControlled(),
+                extractOccupancy(transitLeg.origin()),
+                extractAlerts(transitLeg)
+        );
+    }
+
+    private TripSummaryResponse buildTripSummary(
+            JourneyDto journey,
+            TripRouteResponse route,
+            TripInsightResponse insights
+    ) {
+        return new TripSummaryResponse(
+                secondsToMinutes(journey.tripDuration()),
+                secondsToMinutes(journey.tripRtDuration()),
+                journey.interchanges(),
+                route,
+                insights
+        );
+    }
+
+    private String getDepartureTime(LegDto leg) {
+        return leg.origin() != null ? leg.origin().departureTimeEstimated() : null;
+    }
+
+    private String getArrivalTime(LegDto leg) {
+        return leg.destination() != null ? leg.destination().arrivalTimeEstimated() : null;
+    }
+
+    private String extractMode(TransportationDto transportation) {
+        if (transportation == null || transportation.product() == null) {
+            return null;
+        }
+        return transportation.product().name();
+    }
+
+    private String extractLine(TransportationDto transportation) {
+        if (transportation == null) {
+            return null;
+        }
+        return transportation.disassembledName();
+    }
+
+    private String extractDirection(TransportationDto transportation) {
+        if (transportation == null || transportation.destination() == null) {
+            return DEFAULT_DIRECTION;
+        }
+        return transportation.destination().name();
     }
 
     private Integer secondsToMinutes(Integer seconds) {
@@ -108,6 +155,7 @@ public class PlanningService {
         }
         return OffsetDateTime.parse(isoDateTime).format(TIME_FORMATTER);
     }
+
     private String cleanStopName(String rawName) {
         if (rawName == null) {
             return null;
