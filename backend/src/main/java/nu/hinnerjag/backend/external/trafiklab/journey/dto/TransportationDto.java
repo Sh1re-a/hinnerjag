@@ -1,4 +1,4 @@
-package nu.hinnerjag.backend.external.trafiklab.dto;
+package nu.hinnerjag.backend.external.trafiklab.journey.dto;
 
 
 public record TransportationDto(

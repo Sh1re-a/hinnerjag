@@ -1,6 +1,6 @@
-package nu.hinnerjag.backend.external.trafiklab;
+package nu.hinnerjag.backend.external.trafiklab.journey;
 
-import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
+import nu.hinnerjag.backend.external.trafiklab.journey.dto.JourneyPlannerResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 

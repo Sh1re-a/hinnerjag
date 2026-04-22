@@ -1,10 +1,10 @@
 package nu.hinnerjag.backend.planning.service;
 
-import nu.hinnerjag.backend.external.trafiklab.dto.InfoDto;
-import nu.hinnerjag.backend.external.trafiklab.dto.InfoLinkDto;
-import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
-import nu.hinnerjag.backend.external.trafiklab.dto.PlaceDto;
-import nu.hinnerjag.backend.external.trafiklab.dto.TransportationDto;
+import nu.hinnerjag.backend.external.trafiklab.journey.dto.InfoDto;
+import nu.hinnerjag.backend.external.trafiklab.journey.dto.InfoLinkDto;
+import nu.hinnerjag.backend.external.trafiklab.journey.dto.LegDto;
+import nu.hinnerjag.backend.external.trafiklab.journey.dto.PlaceDto;
+import nu.hinnerjag.backend.external.trafiklab.journey.dto.TransportationDto;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
