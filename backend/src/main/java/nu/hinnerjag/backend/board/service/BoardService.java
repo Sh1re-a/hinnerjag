@@ -53,7 +53,7 @@ public class BoardService {
                 .toList();
 
         NearbyBoardSiteResponse nearestMetro = findNearestMetro(nearbySites);
-        List<NearbyBoardSiteResponse> nearbyBusStops = findNearbyBusStops(nearbySites);
+        List<NearbyBoardSiteResponse> nearbyBusStops = findNearbyBusStops(nearbySites, nearestMetro);
 
         return new NearbyBoardResponse(
                 userLat,
@@ -90,16 +90,17 @@ public class BoardService {
 
         return null;
     }
-
     private List<NearbyBoardSiteResponse> findNearbyBusStops(
             List<SiteWithDistance> nearbySites,
             NearbyBoardSiteResponse nearestMetro
     ) {
-        List<NearbyBoardSiteResponse> nearbyBusStops = findNearbyBusStops(nearbySites, nearestMetro);
+        List<NearbyBoardSiteResponse> busStops = new ArrayList<>();
+
         for (SiteWithDistance candidate : nearbySites) {
             if (nearestMetro != null && candidate.site().siteId().equals(nearestMetro.siteId())) {
                 continue;
             }
+
             if (candidate.distanceMeters() > BUS_RADIUS_METERS) {
                 continue;
             }
@@ -131,6 +132,7 @@ public class BoardService {
 
         return busStops;
     }
+
 
     private List<BoardDepartureResponse> mapDepartures(TransportDeparturesResponse response) {
         List<BoardDepartureResponse> result = new ArrayList<>();
