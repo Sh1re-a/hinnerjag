@@ -8,6 +8,7 @@ import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
 import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.PlaceDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.TransportationDto;
+import nu.hinnerjag.backend.planning.dto.JourneySegmentResponse;
 import nu.hinnerjag.backend.planning.dto.TripInsightResponse;
 import nu.hinnerjag.backend.planning.dto.TripRouteResponse;
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
@@ -38,8 +39,10 @@ public class PlanningService {
 
         TripRouteResponse route = buildRoute(firstTransitLeg);
         TripInsightResponse insights = buildInsights(firstTransitLeg);
+        List<JourneySegmentResponse> segments = buildSegments(firstJourney);
+        Integer walkingDurationMinutes = calculateWalkingDurationMinutes(firstJourney);
 
-        return buildTripSummary(firstJourney, route, insights);
+        return buildTripSummary(firstJourney, walkingDurationMinutes, route, insights, segments);
     }
 
     private JourneyDto extractFirstJourney(JourneyPlannerResponse response) {
@@ -101,15 +104,19 @@ public class PlanningService {
 
     private TripSummaryResponse buildTripSummary(
             JourneyDto journey,
+            Integer walkingDurationMinutes,
             TripRouteResponse route,
-            TripInsightResponse insights
+            TripInsightResponse insights,
+            List<JourneySegmentResponse> segments
     ) {
         return new TripSummaryResponse(
                 secondsToMinutes(journey.tripDuration()),
                 secondsToMinutes(journey.tripRtDuration()),
+                walkingDurationMinutes,
                 journey.interchanges(),
                 route,
-                insights
+                insights,
+                segments
         );
     }
 
@@ -215,5 +222,67 @@ public class PlanningService {
         }
 
         return alerts;
+    }
+
+    private List<JourneySegmentResponse> buildSegments(JourneyDto journey) {
+        List<JourneySegmentResponse> segments = new ArrayList<>();
+
+        if (journey == null || journey.legs() == null) {
+            return segments;
+        }
+
+        for (LegDto leg : journey.legs()) {
+            if (isTransitLeg(leg)) {
+                segments.add(buildTransitSegment(leg));
+            } else {
+                segments.add(buildWalkSegment(leg));
+            }
+        }
+
+        return segments;
+    }
+
+    private JourneySegmentResponse buildTransitSegment(LegDto leg) {
+        TransportationDto transportation = leg.transportation();
+
+        return new JourneySegmentResponse(
+                "TRANSIT",
+                extractPlaceName(leg.origin()),
+                extractPlaceName(leg.destination()),
+                secondsToMinutes(leg.duration()),
+                extractMode(transportation),
+                extractLine(transportation),
+                extractDirection(transportation),
+                extractPlatform(leg.origin())
+        );
+    }
+
+    private JourneySegmentResponse buildWalkSegment(LegDto leg) {
+        return new JourneySegmentResponse(
+                "WALK",
+                extractPlaceName(leg.origin()),
+                extractPlaceName(leg.destination()),
+                secondsToMinutes(leg.duration()),
+                "Walk",
+                null,
+                null,
+                null
+        );
+    }
+
+    private Integer calculateWalkingDurationMinutes(JourneyDto journey) {
+        if (journey == null || journey.legs() == null) {
+            return 0;
+        }
+
+        int totalWalkingSeconds = 0;
+
+        for (LegDto leg : journey.legs()) {
+            if (!isTransitLeg(leg) && leg.duration() != null) {
+                totalWalkingSeconds += leg.duration();
+            }
+        }
+
+        return totalWalkingSeconds / 60;
     }
 }
