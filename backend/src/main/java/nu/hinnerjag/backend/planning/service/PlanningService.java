@@ -5,7 +5,13 @@ import nu.hinnerjag.backend.external.trafiklab.dto.JourneyDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.JourneyPlannerResponse;
 import nu.hinnerjag.backend.external.trafiklab.dto.LegDto;
 import nu.hinnerjag.backend.external.trafiklab.dto.TransportationDto;
-import nu.hinnerjag.backend.planning.dto.*;
+import nu.hinnerjag.backend.planning.dto.CoordinateResponse;
+import nu.hinnerjag.backend.planning.dto.JourneyPlanRequest;
+import nu.hinnerjag.backend.planning.dto.JourneySegmentResponse;
+import nu.hinnerjag.backend.planning.dto.JourneyStopResponse;
+import nu.hinnerjag.backend.planning.dto.TripInsightResponse;
+import nu.hinnerjag.backend.planning.dto.TripRouteResponse;
+import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,12 +25,16 @@ public class PlanningService {
     private final JourneySegmentService journeySegmentService;
     private final JourneyStopService journeyStopService;
     private final JourneyMapLineCreatorService journeyMapLineCreatorService;
+    private final JourneyRequestMapper journeyRequestMapper;
 
     public PlanningService(
             TrafiklabJourneyClient trafiklabJourneyClient,
             JourneySelectionService journeySelectionService,
             PlanningFieldExtractor fieldExtractor,
-            JourneySegmentService journeySegmentService, JourneyStopService journeyStopService, JourneyMapLineCreatorService journeyMapLineCreatorService
+            JourneySegmentService journeySegmentService,
+            JourneyStopService journeyStopService,
+            JourneyMapLineCreatorService journeyMapLineCreatorService,
+            JourneyRequestMapper journeyRequestMapper
     ) {
         this.trafiklabJourneyClient = trafiklabJourneyClient;
         this.journeySelectionService = journeySelectionService;
@@ -32,10 +42,21 @@ public class PlanningService {
         this.journeySegmentService = journeySegmentService;
         this.journeyStopService = journeyStopService;
         this.journeyMapLineCreatorService = journeyMapLineCreatorService;
+        this.journeyRequestMapper = journeyRequestMapper;
     }
 
     public TripSummaryResponse getTestTrip() {
         JourneyPlannerResponse response = trafiklabJourneyClient.fetchTestTrip();
+        return buildTripSummaryFromResponse(response);
+    }
+
+    public TripSummaryResponse planJourney(JourneyPlanRequest request) {
+        String url = journeyRequestMapper.buildTripsUrl(request);
+        JourneyPlannerResponse response = trafiklabJourneyClient.fetchJourneyByUrl(url);
+        return buildTripSummaryFromResponse(response);
+    }
+
+    private TripSummaryResponse buildTripSummaryFromResponse(JourneyPlannerResponse response) {
         JourneyDto firstJourney = journeySelectionService.extractFirstJourney(response);
         LegDto firstTransitLeg = journeySelectionService.findFirstTransitLeg(firstJourney);
 
