@@ -8,6 +8,7 @@ import nu.hinnerjag.backend.external.trafiklab.dto.TransportationDto;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 public class PlanningFieldExtractor {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final ZoneId STOCKHOLM_ZONE = ZoneId.of("Europe/Stockholm");
     private static final String DEFAULT_DIRECTION = "Unknown";
 
     public String formatTime(String isoDateTime) {
@@ -23,7 +25,9 @@ public class PlanningFieldExtractor {
             return null;
         }
 
-        return OffsetDateTime.parse(isoDateTime).format(TIME_FORMATTER);
+        return OffsetDateTime.parse(isoDateTime)
+                .atZoneSameInstant(STOCKHOLM_ZONE)
+                .format(TIME_FORMATTER);
     }
 
     public Integer secondsToMinutes(Integer seconds) {
