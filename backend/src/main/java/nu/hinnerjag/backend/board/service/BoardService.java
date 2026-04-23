@@ -8,6 +8,7 @@ import nu.hinnerjag.backend.external.trafiklab.transport.TrafiklabTransportClien
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDepartureDto;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDeparturesResponse;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSiteDto;
+import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportStopPointFullDto;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -40,7 +41,11 @@ public class BoardService {
 
     public NearbyBoardResponse getNearbyBoards(Double userLat, Double userLng) {
         List<TransportSiteDto> sites = trafiklabTransportClient.fetchSites();
+        List<TransportStopPointFullDto> stopPoints = trafiklabTransportClient.fetchStopPoints();
 
+        if (stopPoints == null) {
+            stopPoints = List.of();
+        }
         if (sites == null) {
             sites = List.of();
         }
@@ -53,7 +58,7 @@ public class BoardService {
                 .limit(20)
                 .toList();
 
-        NearbyBoardSiteResponse nearestMetro = findNearestMetro(nearbySites);
+        NearbyBoardSiteResponse nearestMetro = findNearestMetro(nearbySites, stopPoints);
         List<NearbyBoardSiteResponse> nearbyBusStops = findNearbyBusStops(nearbySites, nearestMetro);
 
         return new NearbyBoardResponse(
@@ -64,7 +69,7 @@ public class BoardService {
         );
     }
 
-    private NearbyBoardSiteResponse findNearestMetro(List<SiteWithDistance> nearbySites) {
+    private NearbyBoardSiteResponse findNearestMetro(List<SiteWithDistance> nearbySites, List<TransportStopPointFullDto> stopPoints) {
         for (SiteWithDistance candidate : nearbySites) {
             if (candidate.distanceMeters() > METRO_RADIUS_METERS) {
                 continue;
@@ -82,7 +87,7 @@ public class BoardService {
             if (!metroDepartures.isEmpty()) {
                 return new NearbyBoardSiteResponse(
                         candidate.site().siteId(),
-                        candidate.site().name(),
+                        resolveMetroStationName(candidate, stopPoints),
                         roundDistance(candidate.distanceMeters()),
                         metroDepartures
                 );
@@ -207,5 +212,35 @@ public class BoardService {
             TransportSiteDto site,
             double distanceMeters
     ) {
+    }
+
+    private String resolveMetroStationName(
+            SiteWithDistance candidate,
+            List<TransportStopPointFullDto> stopPoints
+    ) {
+        if (candidate.site().stopAreas() == null || candidate.site().stopAreas().isEmpty()) {
+            return candidate.site().name();
+        }
+
+        for (Integer stopAreaId : candidate.site().stopAreas()) {
+            if (stopAreaId == null) {
+                continue;
+            }
+
+            for (TransportStopPointFullDto stopPoint : stopPoints) {
+                if (stopPoint == null || stopPoint.stopArea() == null) {
+                    continue;
+                }
+
+                boolean sameStopArea = stopAreaId.equals(stopPoint.stopArea().id());
+                boolean isMetroStation = "METROSTN".equalsIgnoreCase(stopPoint.stopArea().type());
+
+                if (sameStopArea && isMetroStation) {
+                    return stopPoint.stopArea().name();
+                }
+            }
+        }
+
+        return candidate.site().name();
     }
 }

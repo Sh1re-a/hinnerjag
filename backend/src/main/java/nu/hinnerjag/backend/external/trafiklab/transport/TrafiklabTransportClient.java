@@ -2,6 +2,7 @@ package nu.hinnerjag.backend.external.trafiklab.transport;
 
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDeparturesResponse;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSiteDto;
+import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportStopPointFullDto;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -40,5 +41,19 @@ public class TrafiklabTransportClient {
                 .uri(url)
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<TransportSiteDto>>() {});
+    }
+
+    public List<TransportStopPointFullDto> fetchStopPoints() {
+
+        String url = BASE_URL + "/stop-points";
+
+        return restClient.get()
+
+                .uri(url)
+
+                .retrieve()
+
+                .body(new ParameterizedTypeReference<List<TransportStopPointFullDto>>() {});
+
     }
 }
