@@ -6,6 +6,7 @@ import nu.hinnerjag.backend.planning.service.PlanningService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/plans")
 public class PlanningController {
