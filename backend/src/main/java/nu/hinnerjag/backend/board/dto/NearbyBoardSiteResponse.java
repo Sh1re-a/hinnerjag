@@ -6,6 +6,7 @@ public record NearbyBoardSiteResponse(
         Integer siteId,
         String siteName,
         Double distanceMeters,
+        BoardAccessResponse access,
         List<BoardDepartureResponse> departures
 ) {
 }

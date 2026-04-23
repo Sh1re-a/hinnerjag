@@ -1,6 +1,8 @@
 package nu.hinnerjag.backend.board.service;
 
+import nu.hinnerjag.backend.board.dto.BoardAccessResponse;
 import nu.hinnerjag.backend.board.dto.BoardDepartureResponse;
+import nu.hinnerjag.backend.board.dto.BoardReachabilityResponse;
 import nu.hinnerjag.backend.board.dto.BoardResponse;
 import nu.hinnerjag.backend.board.dto.NearbyBoardResponse;
 import nu.hinnerjag.backend.board.dto.NearbyBoardSiteResponse;
@@ -9,8 +11,11 @@ import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDepartureD
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDeparturesResponse;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSiteDto;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportStopPointFullDto;
+import nu.hinnerjag.backend.planning.service.StationBuffer;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -24,7 +29,7 @@ public class BoardService {
     private static final int MAX_BUS_STOPS = 3;
     private static final double BUS_RADIUS_METERS = 300.0;
     private static final double METRO_RADIUS_METERS = 1200.0;
-    private static final Set<String> METRO_LINES = Set.of("13", "14", "17", "18", "19");
+    private static final Set<String> METRO_LINES = Set.of("10", "11", "13", "14", "17", "18", "19");
 
     private final TrafiklabTransportClient trafiklabTransportClient;
 
@@ -43,17 +48,21 @@ public class BoardService {
         List<TransportSiteDto> sites = trafiklabTransportClient.fetchSites();
         List<TransportStopPointFullDto> stopPoints = trafiklabTransportClient.fetchStopPoints();
 
-        if (stopPoints == null) {
-            stopPoints = List.of();
-        }
         if (sites == null) {
             sites = List.of();
+        }
+
+        if (stopPoints == null) {
+            stopPoints = List.of();
         }
 
         List<SiteWithDistance> nearbySites = sites.stream()
                 .filter(site -> site != null && site.siteId() != null)
                 .filter(site -> site.lat() != null && site.lon() != null)
-                .map(site -> new SiteWithDistance(site, distanceMeters(userLat, userLng, site.lat(), site.lon())))
+                .map(site -> new SiteWithDistance(
+                        site,
+                        distanceMeters(userLat, userLng, site.lat(), site.lon())
+                ))
                 .sorted(Comparator.comparingDouble(SiteWithDistance::distanceMeters))
                 .limit(20)
                 .toList();
@@ -69,7 +78,10 @@ public class BoardService {
         );
     }
 
-    private NearbyBoardSiteResponse findNearestMetro(List<SiteWithDistance> nearbySites, List<TransportStopPointFullDto> stopPoints) {
+    private NearbyBoardSiteResponse findNearestMetro(
+            List<SiteWithDistance> nearbySites,
+            List<TransportStopPointFullDto> stopPoints
+    ) {
         for (SiteWithDistance candidate : nearbySites) {
             if (candidate.distanceMeters() > METRO_RADIUS_METERS) {
                 continue;
@@ -78,7 +90,10 @@ public class BoardService {
             TransportDeparturesResponse response =
                     trafiklabTransportClient.fetchDeparturesBySiteIdSafely(candidate.site().siteId());
 
-            List<BoardDepartureResponse> departures = mapDepartures(response);
+            String metroStationName = resolveMetroStationName(candidate, stopPoints);
+            BoardAccessResponse access = createMetroAccess(candidate.distanceMeters(), metroStationName);
+
+            List<BoardDepartureResponse> departures = mapDeparturesWithAccess(response, access);
             List<BoardDepartureResponse> metroDepartures = departures.stream()
                     .filter(this::isMetroDeparture)
                     .limit(MAX_FILTERED_DEPARTURES)
@@ -87,8 +102,9 @@ public class BoardService {
             if (!metroDepartures.isEmpty()) {
                 return new NearbyBoardSiteResponse(
                         candidate.site().siteId(),
-                        resolveMetroStationName(candidate, stopPoints),
+                        metroStationName,
                         roundDistance(candidate.distanceMeters()),
+                        access,
                         metroDepartures
                 );
             }
@@ -96,6 +112,7 @@ public class BoardService {
 
         return null;
     }
+
     private List<NearbyBoardSiteResponse> findNearbyBusStops(
             List<SiteWithDistance> nearbySites,
             NearbyBoardSiteResponse nearestMetro
@@ -114,7 +131,9 @@ public class BoardService {
             TransportDeparturesResponse response =
                     trafiklabTransportClient.fetchDeparturesBySiteIdSafely(candidate.site().siteId());
 
-            List<BoardDepartureResponse> departures = mapDepartures(response);
+            BoardAccessResponse access = createBusAccess(candidate.distanceMeters());
+
+            List<BoardDepartureResponse> departures = mapDeparturesWithAccess(response, access);
             List<BoardDepartureResponse> busDepartures = departures.stream()
                     .filter(this::isBusDeparture)
                     .limit(MAX_FILTERED_DEPARTURES)
@@ -128,6 +147,7 @@ public class BoardService {
                     candidate.site().siteId(),
                     candidate.site().name(),
                     roundDistance(candidate.distanceMeters()),
+                    access,
                     busDepartures
             ));
 
@@ -155,7 +175,8 @@ public class BoardService {
                     departure.line() != null ? departure.line().designation() : null,
                     extractDestination(departure),
                     departure.display(),
-                    departure.line() != null ? departure.line().transportMode() : null
+                    departure.line() != null ? departure.line().transportMode() : null,
+                    null
             ));
 
             if (result.size() == MAX_SOURCE_DEPARTURES) {
@@ -166,6 +187,36 @@ public class BoardService {
         return result;
     }
 
+    private List<BoardDepartureResponse> mapDeparturesWithAccess(
+            TransportDeparturesResponse response,
+            BoardAccessResponse access
+    ) {
+        List<BoardDepartureResponse> result = new ArrayList<>();
+
+        if (response == null || response.departures() == null) {
+            return result;
+        }
+
+        for (TransportDepartureDto departure : response.departures()) {
+            if (departure == null) {
+                continue;
+            }
+
+            result.add(new BoardDepartureResponse(
+                    departure.line() != null ? departure.line().designation() : null,
+                    extractDestination(departure),
+                    departure.display(),
+                    departure.line() != null ? departure.line().transportMode() : null,
+                    createReachability(departure.display(), access)
+            ));
+
+            if (result.size() == MAX_SOURCE_DEPARTURES) {
+                break;
+            }
+        }
+
+        return result;
+    }
 
     private String extractDestination(TransportDepartureDto departure) {
         if (departure.destination() != null && !departure.destination().isBlank()) {
@@ -187,31 +238,6 @@ public class BoardService {
     private boolean isBusDeparture(BoardDepartureResponse departure) {
         return "BUS".equalsIgnoreCase(departure.transportMode())
                 || (departure.line() != null && !METRO_LINES.contains(departure.line()));
-    }
-
-    private double distanceMeters(double userLat, double userLng, double siteLat, double siteLng) {
-        double earthRadius = 6371000.0;
-
-        double dLat = Math.toRadians(siteLat - userLat);
-        double dLng = Math.toRadians(siteLng - userLng);
-
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(userLat)) * Math.cos(Math.toRadians(siteLat))
-                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        return earthRadius * c;
-    }
-
-    private double roundDistance(double distanceMeters) {
-        return Math.round(distanceMeters);
-    }
-
-    private record SiteWithDistance(
-            TransportSiteDto site,
-            double distanceMeters
-    ) {
     }
 
     private String resolveMetroStationName(
@@ -242,5 +268,126 @@ public class BoardService {
         }
 
         return candidate.site().name();
+    }
+
+    private int calculateWalkMinutes(double distanceMeters) {
+        return Math.max(1, (int) Math.ceil(distanceMeters / 80.0));
+    }
+
+    private int parseMinutesUntilDeparture(String display) {
+        if (display == null || display.isBlank()) {
+            return Integer.MAX_VALUE;
+        }
+
+        String value = display.trim().toLowerCase();
+
+        if (value.equals("nu")) {
+            return 0;
+        }
+
+        if (value.endsWith("min")) {
+            String number = value.replace("min", "").trim();
+            try {
+                return Integer.parseInt(number);
+            } catch (NumberFormatException e) {
+                return Integer.MAX_VALUE;
+            }
+        }
+
+        try {
+            LocalTime departureTime = LocalTime.parse(display.trim());
+            LocalTime now = LocalTime.now();
+
+            long minutes = ChronoUnit.MINUTES.between(now, departureTime);
+
+            if (minutes < 0) {
+                minutes += 24 * 60;
+            }
+
+            return (int) minutes;
+        } catch (Exception e) {
+            return Integer.MAX_VALUE;
+        }
+    }
+
+    private String calculateStatus(int marginMinutes) {
+        if (marginMinutes >= 2) {
+            return "SAFE";
+        }
+
+        if (marginMinutes >= 0) {
+            return "TIGHT";
+        }
+
+        return "MISS";
+    }
+
+    private BoardAccessResponse createMetroAccess(double distanceMeters, String stationName) {
+        int walkMinutes = calculateWalkMinutes(distanceMeters);
+        StationBuffer buffer = StationBuffer.from(stationName);
+        int bufferMinutes = buffer.getMinutes();
+        int recommendedAccessMinutes = walkMinutes + bufferMinutes;
+
+        return new BoardAccessResponse(
+                walkMinutes,
+                bufferMinutes,
+                recommendedAccessMinutes,
+                "Gångtid till station plus perrongmarginal för tunnelbana"
+        );
+    }
+
+    private BoardAccessResponse createBusAccess(double distanceMeters) {
+        int walkMinutes = calculateWalkMinutes(distanceMeters);
+
+        return new BoardAccessResponse(
+                walkMinutes,
+                0,
+                walkMinutes,
+                "Gångtid till hållplats"
+        );
+    }
+
+    private BoardReachabilityResponse createReachability(
+            String display,
+            BoardAccessResponse access
+    ) {
+        int minutesUntilDeparture = parseMinutesUntilDeparture(display);
+        int marginMinutes = minutesUntilDeparture - access.recommendedAccessMinutes();
+        boolean recommendedGoNow = marginMinutes <= 0;
+        int recommendedWalkInMinutes = Math.max(0, marginMinutes);
+        String status = calculateStatus(marginMinutes);
+
+        return new BoardReachabilityResponse(
+                minutesUntilDeparture,
+                recommendedGoNow,
+                recommendedWalkInMinutes,
+                marginMinutes,
+                status
+        );
+    }
+
+    private double distanceMeters(double userLat, double userLng, double siteLat, double siteLng) {
+        double earthRadius = 6371000.0;
+
+        double dLat = Math.toRadians(siteLat - userLat);
+        double dLng = Math.toRadians(siteLng - userLng);
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(userLat)) * Math.cos(Math.toRadians(siteLat))
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return earthRadius * c;
+    }
+
+    private double roundDistance(double distanceMeters) {
+        return Math.round(distanceMeters);
+    }
+
+    private record SiteWithDistance(
+            TransportSiteDto site,
+            double distanceMeters
+    ) {
     }
 }

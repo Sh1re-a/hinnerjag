@@ -4,6 +4,7 @@ public record BoardDepartureResponse(
         String line,
         String destination,
         String display,
-        String transportMode
+        String transportMode,
+        BoardReachabilityResponse reachability
 ) {
 }
