@@ -85,7 +85,9 @@ function App() {
               </div>
 
               <div className="min-w-0">
-                <p className="text-base text-white/60 sm:text-lg">Din position</p>
+                <p className="text-base text-white/60 sm:text-lg">
+                  Din position
+                </p>
                 <h1 className="truncate text-[2.15rem] font-semibold tracking-tight text-white sm:text-5xl">
                   {stationName}
                 </h1>
