@@ -3,9 +3,7 @@ import "./App.css";
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
 import { apiFetch } from "./lib/api";
 
-type HealthResponse = {
-  status: string;
-};
+
 
 type NearbyBoardResponse = {
   nearestMetro: {

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "../lib/api";
 import type { PositionState } from "./useCurrentPosition";
 
-type Reachability = {
+export type Reachability = {
   minutesUntilDeparture: number;
   recommendedGoNow: boolean;
   recommendedWalkInMinutes: number;
@@ -10,7 +10,7 @@ type Reachability = {
   status: "SAFE" | "TIGHT" | "MISS";
 };
 
-type Departure = {
+export type Departure = {
   line: string | null;
   destination: string | null;
   display: string | null;
@@ -18,14 +18,14 @@ type Departure = {
   reachability: Reachability | null;
 };
 
-type Access = {
+export type Access = {
   walkMinutes: number;
   bufferMinutes: number;
   recommendedAccessMinutes: number;
   reason: string;
 };
 
-type NearbySite = {
+export type NearbySite = {
   siteId: number;
   siteName: string;
   distanceMeters: number;
