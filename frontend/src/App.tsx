@@ -1,136 +1,141 @@
-import { useQuery } from "@tanstack/react-query";
+import { LocateFixed, RefreshCw } from "lucide-react";
+import { useState } from "react";
 import "./App.css";
+import { LocationDialog } from "./components/LocationDialog";
+import { MetroBoard } from "./components/MetroBoard";
+import { BusBoard } from "./components/BusBoard";
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
-import { apiFetch } from "./lib/api";
-
-
-
-type NearbyBoardResponse = {
-  nearestMetro: {
-    siteName: string;
-    access: {
-      recommendedAccessMinutes: number;
-      reason: string;
-    };
-    departures: Array<{
-      line: string | null;
-      destination: string | null;
-      display: string | null;
-      reachability: {
-        recommendedGoNow: boolean;
-        recommendedWalkInMinutes: number;
-        status: string;
-      } | null;
-    }>;
-  } | null;
-};
+import { useNearbyBoard } from "./hooks/useNearbyBoard";
 
 function App() {
+  const [showLocationDialog, setShowLocationDialog] = useState(true);
   const { position, isLocating, locationError, requestPosition } =
     useCurrentPosition();
 
- 
-  const nearbyBoardQuery = useQuery({
-    queryKey: ["nearby-board", position?.lat, position?.lng],
-    queryFn: () =>
-      apiFetch<NearbyBoardResponse>(
-        `/api/board/nearby?lat=${position!.lat}&lng=${position!.lng}`,
-      ),
-    enabled: Boolean(position),
-  });
+  const nearbyBoardQuery = useNearbyBoard(position);
 
-  const topMetro = nearbyBoardQuery.data?.nearestMetro;
-  const topDeparture = topMetro?.departures[0];
+  const errorMessage =
+    nearbyBoardQuery.error instanceof Error
+      ? nearbyBoardQuery.error.message
+      : null;
+
+  const stationName =
+    nearbyBoardQuery.data?.nearestMetro?.siteName ?? "Din position";
+  const updatedText = nearbyBoardQuery.dataUpdatedAt
+    ? "Uppdaterad just nu"
+    : "Vantar pa live-data";
+
+  const handleAllowLocation = async () => {
+    try {
+      await requestPosition();
+      setShowLocationDialog(false);
+    } catch {
+      // The location hook already stores a user-facing error message.
+    }
+  };
+
+  const handleRefresh = () => {
+    if (!position) {
+      setShowLocationDialog(true);
+      return;
+    }
+
+    nearbyBoardQuery.refetch();
+  };
 
   return (
-    <main className="grid min-h-screen place-items-center bg-white px-4 py-6 text-slate-900">
-      <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p className="text-sm font-medium tracking-wide text-slate-500">
-          HinnerJag
-        </p>
+    <main className="min-h-screen bg-[#05070b] text-white">
+      <div className="relative min-h-screen overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#23384e_0%,#0c1520_28%,#05070b_60%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(1,4,9,0.18)_0%,rgba(1,4,9,0.72)_52%,rgba(1,4,9,0.94)_100%)]" />
+        <div className="absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0)_100%)]" />
 
-        <h1 className="mt-2 text-3xl font-semibold">HinnerJag!!</h1>
+        <LocationDialog
+          open={!position && showLocationDialog}
+          isLocating={isLocating}
+          locationError={locationError}
+          onAllow={() => {
+            void handleAllowLocation();
+          }}
+          onSkip={() => setShowLocationDialog(false)}
+        />
 
-        <div className="mt-6">
-          <button
-            onClick={() => requestPosition().catch(() => null)}
-            disabled={isLocating}
-            className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-60"
-          >
-            {isLocating ? "Hämtar position..." : "Tillåt location"}
-          </button>
-
-          {locationError && (
-            <p className="mt-3 text-sm text-red-600">{locationError}</p>
-          )}
-
-          {position && (
-            <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-left">
-              <p className="text-sm font-medium text-slate-500">Din position</p>
-              <p className="mt-2 text-sm text-slate-900">
-                {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
+        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:max-w-3xl sm:px-6">
+          <nav className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/45">
+                HinnerJag
               </p>
+              <p className="mt-1 text-sm text-white/65">Perrongkansla hemma</p>
             </div>
-          )}
-        </div>
 
-        <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-left">
-          <p className="text-sm font-medium text-slate-500">Nearby board</p>
+            <button
+              onClick={handleRefresh}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white/80 backdrop-blur transition hover:bg-white/15"
+              type="button"
+            >
+              <RefreshCw size={20} />
+            </button>
+          </nav>
 
-          {!position && (
-            <p className="mt-2 text-sm text-slate-600">
-              Godkänn location först.
-            </p>
-          )}
-
-          {nearbyBoardQuery.isLoading && (
-            <p className="mt-2 text-sm text-slate-600">
-              Hämtar avgångar nära dig...
-            </p>
-          )}
-
-          {nearbyBoardQuery.error && (
-            <p className="mt-2 text-sm text-red-600">
-              {(nearbyBoardQuery.error as Error).message}
-            </p>
-          )}
-
-          {topMetro && (
-            <div className="mt-3 space-y-3">
-              <div>
-                <p className="text-lg font-semibold text-slate-900">
-                  {topMetro.siteName}
-                </p>
-                <p className="text-sm text-slate-600">
-                  {topMetro.access.recommendedAccessMinutes} min till avgång
-                </p>
-                <p className="text-sm text-slate-500">
-                  {topMetro.access.reason}
-                </p>
+          <header className="mt-6 flex items-start justify-between gap-4 sm:mt-7">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-sky-400/20 bg-sky-500/10 text-sky-300 backdrop-blur">
+                <LocateFixed size={26} />
               </div>
 
-              {topDeparture && (
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
-                  <p className="text-sm font-semibold text-slate-900">
-                    Linje {topDeparture.line ?? "-"}
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    {topDeparture.destination ?? "Ingen destination"}
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    Avgår {topDeparture.display ?? "-"}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-900">
-                    {topDeparture.reachability?.recommendedGoNow
-                      ? "Gå nu"
-                      : `Gå om ${topDeparture.reachability?.recommendedWalkInMinutes ?? "-"} min`}
-                  </p>
-                </div>
-              )}
+              <div className="min-w-0">
+                <p className="text-base text-white/60 sm:text-lg">Din position</p>
+                <h1 className="truncate text-[2.15rem] font-semibold tracking-tight text-white sm:text-5xl">
+                  {stationName}
+                </h1>
+                <p className="mt-1.5 flex items-center gap-2 text-sm text-emerald-400">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.95)]" />
+                  {updatedText}
+                </p>
+              </div>
             </div>
+          </header>
+
+          {!position && !showLocationDialog && (
+            <button
+              onClick={() => {
+                setShowLocationDialog(true);
+              }}
+              className="mt-4 rounded-full border border-white/10 bg-white/10 px-4 py-3 text-sm font-medium text-white/85 backdrop-blur transition hover:bg-white/15"
+              type="button"
+            >
+              Tillat location for att se boarden
+            </button>
           )}
+
+          <section className="mt-5 grid gap-3 xl:grid-cols-[1.06fr,0.94fr] xl:items-start">
+            <MetroBoard
+              metro={nearbyBoardQuery.data?.nearestMetro ?? null}
+              isLoading={nearbyBoardQuery.isLoading}
+              errorMessage={errorMessage}
+            />
+
+            <BusBoard
+              busStops={nearbyBoardQuery.data?.nearbyBusStops ?? []}
+              isLoading={nearbyBoardQuery.isLoading}
+            />
+          </section>
         </div>
-      </section>
+
+        <div className="fixed inset-x-4 bottom-4 z-20 mx-auto max-w-3xl sm:inset-x-6">
+          <button
+            className="flex w-full items-center justify-between rounded-[24px] bg-emerald-500 px-5 py-4 text-left text-base font-semibold text-white shadow-[0_16px_36px_rgba(34,197,94,0.30)] transition hover:bg-emerald-400 sm:text-lg"
+            type="button"
+          >
+            <span className="flex items-center gap-3">
+              <span className="text-xl">➜</span>
+              Hinner du med din resa?
+            </span>
+            <span className="text-xl">→</span>
+          </button>
+        </div>
+      </div>
     </main>
   );
 }
