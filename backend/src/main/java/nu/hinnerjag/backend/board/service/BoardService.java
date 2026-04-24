@@ -18,14 +18,16 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 @Service
 public class BoardService {
 
-    private static final int MAX_FILTERED_DEPARTURES = 3;
-    private static final int MAX_SOURCE_DEPARTURES = 15;
+    private static final int MAX_FILTERED_DEPARTURES = 15;
+    private static final int MAX_SOURCE_DEPARTURES = 40;
     private static final int MAX_BUS_STOPS = 3;
     private static final double BUS_RADIUS_METERS = 300.0;
     private static final double METRO_RADIUS_METERS = 1200.0;
@@ -94,10 +96,10 @@ public class BoardService {
             BoardAccessResponse access = createMetroAccess(candidate.distanceMeters(), metroStationName);
 
             List<BoardDepartureResponse> departures = mapDeparturesWithAccess(response, access);
-            List<BoardDepartureResponse> metroDepartures = departures.stream()
-                    .filter(this::isMetroDeparture)
-                    .limit(MAX_FILTERED_DEPARTURES)
-                    .toList();
+                List<BoardDepartureResponse> metroDepartures = prepareDepartures(
+                    departures,
+                    this::isMetroDeparture
+                );
 
             if (!metroDepartures.isEmpty()) {
                 return new NearbyBoardSiteResponse(
@@ -134,10 +136,10 @@ public class BoardService {
             BoardAccessResponse access = createBusAccess(candidate.distanceMeters());
 
             List<BoardDepartureResponse> departures = mapDeparturesWithAccess(response, access);
-            List<BoardDepartureResponse> busDepartures = departures.stream()
-                    .filter(this::isBusDeparture)
-                    .limit(MAX_FILTERED_DEPARTURES)
-                    .toList();
+                List<BoardDepartureResponse> busDepartures = prepareDepartures(
+                    departures,
+                    this::isBusDeparture
+                );
 
             if (busDepartures.isEmpty()) {
                 continue;
@@ -238,6 +240,39 @@ public class BoardService {
     private boolean isBusDeparture(BoardDepartureResponse departure) {
         return "BUS".equalsIgnoreCase(departure.transportMode())
                 || (departure.line() != null && !METRO_LINES.contains(departure.line()));
+    }
+
+    private List<BoardDepartureResponse> prepareDepartures(
+            List<BoardDepartureResponse> departures,
+            Predicate<BoardDepartureResponse> modeFilter
+    ) {
+        List<BoardDepartureResponse> sorted = departures.stream()
+                .filter(modeFilter)
+                .filter(departure -> departure.reachability() != null)
+                .filter(departure -> departure.reachability().minutesUntilDeparture() != Integer.MAX_VALUE)
+                .sorted(Comparator.comparingInt(departure -> departure.reachability().minutesUntilDeparture()))
+                .toList();
+
+        Set<String> seen = new HashSet<>();
+        List<BoardDepartureResponse> unique = new ArrayList<>();
+
+        for (BoardDepartureResponse departure : sorted) {
+            String key = (departure.line() == null ? "-" : departure.line())
+                    + "|" + (departure.destination() == null ? "-" : departure.destination())
+                    + "|" + departure.reachability().minutesUntilDeparture();
+
+            if (!seen.add(key)) {
+                continue;
+            }
+
+            unique.add(departure);
+
+            if (unique.size() >= MAX_FILTERED_DEPARTURES) {
+                break;
+            }
+        }
+
+        return unique;
     }
 
     private String resolveMetroStationName(
