@@ -1,5 +1,10 @@
 import type { NearbySite } from "../hooks/useNearbyBoard";
-import { formatDistance, getDepartureMessage, getStatusTone, getTimeTone } from "./boardUi";
+import {
+  formatDistance,
+  getDepartureMessage,
+  getStatusTone,
+  getTimeTone,
+} from "./boardUi";
 
 type MetroBoardProps = {
   metro: NearbySite | null;
@@ -57,7 +62,8 @@ export function MetroBoard({
                   {metro.siteName}
                 </p>
                 <p className="mt-1 text-base text-white/72">
-                  {formatDistance(metro.distanceMeters)} • {metro.access.walkMinutes} min att ga
+                  {formatDistance(metro.distanceMeters)} •{" "}
+                  {metro.access.walkMinutes} min att ga
                 </p>
                 <p className="mt-2 text-sm text-white/55">
                   {metro.access.reason}

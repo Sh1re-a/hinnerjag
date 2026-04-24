@@ -1,5 +1,10 @@
 import type { NearbySite } from "../hooks/useNearbyBoard";
-import { formatDistance, getDepartureMessage, getStatusTone, getTimeTone } from "./boardUi";
+import {
+  formatDistance,
+  getDepartureMessage,
+  getStatusTone,
+  getTimeTone,
+} from "./boardUi";
 
 type BusBoardProps = {
   busStops: NearbySite[];
@@ -44,9 +49,12 @@ export function BusBoard({ busStops, isLoading }: BusBoardProps) {
                 </div>
 
                 <div>
-                  <p className="text-xl font-semibold text-white">{stop.siteName}</p>
+                  <p className="text-xl font-semibold text-white">
+                    {stop.siteName}
+                  </p>
                   <p className="mt-1 text-sm text-white/65">
-                    {formatDistance(stop.distanceMeters)} • {stop.access.walkMinutes} min att ga
+                    {formatDistance(stop.distanceMeters)} •{" "}
+                    {stop.access.walkMinutes} min att ga
                   </p>
                 </div>
               </div>
