@@ -1,3 +1,5 @@
+import { LocateFixed, ShieldCheck } from "lucide-react";
+
 type LocationDialogProps = {
   open: boolean;
   isLocating: boolean;
@@ -18,10 +20,10 @@ export function LocationDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-slate-900/95 p-6 text-white shadow-2xl">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-600/20 text-3xl text-blue-300">
-          📍
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-6 pt-20 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-sm rounded-4xl border border-white/10 bg-slate-900/95 p-6 text-white shadow-2xl">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-600/20 text-blue-300">
+          <LocateFixed size={30} />
         </div>
 
         <h2 className="mt-5 text-center text-3xl font-semibold">
@@ -56,9 +58,10 @@ export function LocationDialog({
           </p>
         )}
 
-        <p className="mt-5 text-center text-xs text-white/45">
+        <div className="mt-5 flex items-center justify-center gap-2 text-center text-xs text-white/45">
+          <ShieldCheck size={14} />
           Din position används endast för att visa närmaste avgångar.
-        </p>
+        </div>
       </div>
     </div>
   );
