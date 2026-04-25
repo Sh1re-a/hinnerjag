@@ -1,6 +1,11 @@
 package nu.hinnerjag.backend.board.service;
 
-import nu.hinnerjag.backend.board.dto.*;
+import nu.hinnerjag.backend.board.dto.BoardAccessResponse;
+import nu.hinnerjag.backend.board.dto.BoardDepartureResponse;
+import nu.hinnerjag.backend.board.dto.BoardResponse;
+import nu.hinnerjag.backend.board.dto.NearbyBoardResponse;
+import nu.hinnerjag.backend.board.dto.NearbyBoardSiteResponse;
+import nu.hinnerjag.backend.board.dto.SiteWithDistance;
 import nu.hinnerjag.backend.external.trafiklab.transport.TrafiklabTransportClient;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDeparturesResponse;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSiteDto;
@@ -8,8 +13,8 @@ import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportStopPointF
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -18,7 +23,8 @@ public class BoardService {
     private static final int MAX_BUS_STOPS = 3;
     private static final double BUS_RADIUS_METERS = 500.0;
     private static final double METRO_RADIUS_METERS = 1200.0;
-    private static final int NEARBY_SITE_CANDIDATE_LIMIT = 12;
+    private static final int METRO_CANDIDATE_LIMIT = 4;
+    private static final int BUS_CANDIDATE_LIMIT = 6;
     private static final Set<String> METRO_LINES = Set.of("10", "11", "13", "14", "17", "18", "19");
 
     private final TrafiklabTransportClient trafiklabTransportClient;
@@ -33,7 +39,8 @@ public class BoardService {
             BoardDistanceService boardDistanceService,
             BoardAccessService boardAccessService,
             BoardDepartureService boardDepartureService,
-            MetroStationResolver metroStationResolver, BoardCandidateService boardCandidateService
+            MetroStationResolver metroStationResolver,
+            BoardCandidateService boardCandidateService
     ) {
         this.trafiklabTransportClient = trafiklabTransportClient;
         this.boardDistanceService = boardDistanceService;
@@ -62,13 +69,14 @@ public class BoardService {
             stopPoints = List.of();
         }
 
+        Map<Integer, String> metroStationIndex = metroStationResolver.buildMetroStationIndex(stopPoints);
 
         List<SiteWithDistance> metroCandidates = boardCandidateService.buildCandidates(
                 sites,
                 userLat,
                 userLng,
                 METRO_RADIUS_METERS,
-                NEARBY_SITE_CANDIDATE_LIMIT
+                METRO_CANDIDATE_LIMIT
         );
 
         List<SiteWithDistance> busCandidates = boardCandidateService.buildCandidates(
@@ -76,10 +84,10 @@ public class BoardService {
                 userLat,
                 userLng,
                 BUS_RADIUS_METERS,
-                NEARBY_SITE_CANDIDATE_LIMIT
+                BUS_CANDIDATE_LIMIT
         );
 
-        NearbyBoardSiteResponse nearestMetro = findNearestMetro(metroCandidates, stopPoints);
+        NearbyBoardSiteResponse nearestMetro = findNearestMetro(metroCandidates, metroStationIndex);
         List<NearbyBoardSiteResponse> nearbyBusStops = findNearbyBusStops(busCandidates, nearestMetro);
 
         return new NearbyBoardResponse(
@@ -92,14 +100,21 @@ public class BoardService {
 
     private NearbyBoardSiteResponse findNearestMetro(
             List<SiteWithDistance> candidates,
-            List<TransportStopPointFullDto> stopPoints
+            Map<Integer, String> metroStationIndex
     ) {
         for (SiteWithDistance candidate : candidates) {
             TransportDeparturesResponse response =
                     trafiklabTransportClient.fetchDeparturesBySiteIdSafely(candidate.site().siteId());
 
-            String stationName = metroStationResolver.resolveMetroStationName(candidate.site(), stopPoints);
-            BoardAccessResponse access = boardAccessService.createMetroAccess(candidate.distanceMeters(), stationName);
+            String stationName = metroStationResolver.resolveMetroStationName(
+                    candidate.site(),
+                    metroStationIndex
+            );
+
+            BoardAccessResponse access = boardAccessService.createMetroAccess(
+                    candidate.distanceMeters(),
+                    stationName
+            );
 
             List<BoardDepartureResponse> departures =
                     boardDepartureService.mapDeparturesWithAccess(response, access);
@@ -172,5 +187,4 @@ public class BoardService {
         return "BUS".equalsIgnoreCase(departure.transportMode())
                 || (departure.line() != null && !METRO_LINES.contains(departure.line()));
     }
-
 }
