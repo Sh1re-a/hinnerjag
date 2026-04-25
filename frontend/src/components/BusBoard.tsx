@@ -1,4 +1,5 @@
-import { BusFront, ChevronDown, Footprints, MoveRight } from "lucide-react";
+import { BusFront, ChevronDown, Footprints } from "lucide-react";
+import { useState } from "react";
 import type { NearbySite, Reachability } from "../hooks/useNearbyBoard";
 import { getStatusBadgeTone, getStatusTone } from "./boardUi";
 
@@ -7,7 +8,7 @@ type BusBoardProps = {
   isLoading: boolean;
 };
 
-const VISIBLE_DEPARTURES = 4;
+const VISIBLE_DEPARTURES = 2;
 
 function getDisplayLabel(departure: NearbySite["departures"][number]) {
   const minutes = departure.reachability?.minutesUntilDeparture;
@@ -85,157 +86,159 @@ function getTimeTone(
 }
 
 export function BusBoard({ busStops, isLoading }: BusBoardProps) {
-  const primaryStop = busStops[0] ?? null;
-  const secondaryStops = busStops.slice(1, 3);
-  const uniqueDepartures = primaryStop
-    ? getUniqueDepartures(primaryStop.departures)
-    : [];
-  const visibleDepartures = uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
+  const [openStopIds, setOpenStopIds] = useState<Set<number>>(new Set());
 
-  const nextCatchableDeparture =
-    primaryStop?.departures.find(
-      (departure) => departure.reachability?.status !== "MISS",
-    ) ?? null;
-  const nextCatchableMinutes =
-    nextCatchableDeparture?.reachability?.minutesUntilDeparture ?? null;
+  const visibleStops = busStops.slice(0, 2);
+
+  const toggleStopOpen = (siteId: number) => {
+    setOpenStopIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(siteId)) {
+        next.delete(siteId);
+      } else {
+        next.add(siteId);
+      }
+      return next;
+    });
+  };
 
   return (
     <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#171c22]/95 p-2.5 text-white shadow-[0_18px_48px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-3">
-      <div className="mb-2 flex items-center justify-between px-0.5">
+      <div className="mb-2 px-0.5">
         <div className="inline-flex items-center gap-2 text-sky-400">
           <BusFront size={16} />
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em]">
             BUSS NÄRA DIG
           </p>
         </div>
-
-        <button
-          className="inline-flex items-center gap-1 text-sm font-medium text-sky-400 transition hover:text-sky-300"
-          type="button"
-        >
-          Visa alla ({uniqueDepartures.length})
-          <MoveRight size={15} />
-        </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95">
-        {primaryStop && (
-          <div className="flex items-start justify-between gap-2.5 border-b border-white/8 px-2.5 py-2.5">
-            <div className="flex min-w-0 items-start gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-600 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-                <BusFront size={16} />
-              </div>
-
-              <div className="min-w-0">
-                <p className="truncate text-[16px] font-semibold leading-tight text-white">
-                  {primaryStop.siteName}
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-white/72">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Footprints size={10} />
-                    {getGoHint(primaryStop)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <ChevronDown className="mt-1 shrink-0 text-white/45" size={15} />
-          </div>
-        )}
-
-        {isLoading && (
+      {isLoading && (
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95">
           <p className="px-3 py-4 text-sm text-white/65">Hämtar bussar...</p>
-        )}
+        </div>
+      )}
 
-        {!isLoading && busStops.length === 0 && (
+      {!isLoading && busStops.length === 0 && (
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95">
           <p className="px-3 py-4 text-sm text-white/65">
             Inga busshållplatser hittades.
           </p>
-        )}
+        </div>
+      )}
 
-        {primaryStop && (
-          <>
-            <div className="divide-y divide-white/6 px-2.5">
-              {visibleDepartures.map((departure, index) => {
-                const actionLabel = getActionLabel(departure.reachability);
-                const displayLabel = getDisplayLabel(departure);
-                const tone = getTimeTone(
-                  displayLabel,
-                  departure.reachability?.status,
-                );
+      {!isLoading && visibleStops.length > 0 && (
+        <div className="space-y-2">
+          {visibleStops.map((stop) => {
+            const isStopOpen = openStopIds.has(stop.siteId);
+            const uniqueDepartures = getUniqueDepartures(stop.departures);
+              const stopDepartures = uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
 
-                return (
-                  <div
-                    key={`${primaryStop.siteId}-${departure.line}-${index}`}
-                    className="flex items-center justify-between gap-2.5 py-1.5"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-500 text-[12px] font-semibold text-white">
-                        {departure.line ?? "-"}
-                      </div>
+            const nextCatchableDeparture =
+              stop.departures.find(
+                (departure) => departure.reachability?.status !== "MISS",
+              ) ?? null;
+            const nextCatchableMinutes =
+              nextCatchableDeparture?.reachability?.minutesUntilDeparture ?? null;
 
-                      <p className="truncate text-[15px] font-medium text-white">
-                        {departure.destination ?? "Okänd destination"}
-                      </p>
+            return (
+              <div
+                key={stop.siteId}
+                className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95"
+              >
+                <div className="flex min-h-18 items-start justify-between gap-2.5 border-b border-white/8 px-2.5 py-2.5">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-600 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+                      <BusFront size={16} />
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <p
-                        className={`font-mono text-[15px] font-semibold leading-none ${tone}`}
-                      >
-                        {displayLabel}
+                    <div className="min-w-0">
+                      <p className="truncate text-[16px] font-semibold leading-tight text-white">
+                        {stop.siteName}
                       </p>
-
-                      {actionLabel && departure.reachability && (
-                        <span
-                          className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.02em] ${getStatusBadgeTone(
-                            departure.reachability.status,
-                          )}`}
-                        >
-                          {actionLabel}
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-white/72">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Footprints size={10} />
+                          {getGoHint(stop)}
                         </span>
-                      )}
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            <div className="border-t border-white/8 px-2.5 py-1.5">
-              <p className="text-sm text-emerald-300">
-                Tips:{" "}
-                {nextCatchableMinutes === null
-                  ? "Du missar de närmaste avgångarna"
-                  : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
-              </p>
-            </div>
-          </>
-        )}
-      </div>
-
-      {secondaryStops.length > 0 && (
-        <div className="mt-2 space-y-1.5">
-          {secondaryStops.map((stop) => (
-            <div
-              key={stop.siteId}
-              className="flex items-center justify-between rounded-xl border border-white/8 bg-[#151c27]/70 px-2.5 py-2"
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sky-600 text-white">
-                  <BusFront size={14} />
+                  <button
+                    onClick={() => toggleStopOpen(stop.siteId)}
+                    className="mt-1 shrink-0 text-white/45 transition hover:text-white/70"
+                    aria-label={isStopOpen ? "Stäng bussavgångar" : "Öppna bussavgångar"}
+                    type="button"
+                  >
+                    <ChevronDown
+                      className={`transition-transform duration-200 ${isStopOpen ? "rotate-180" : "rotate-0"}`}
+                      size={15}
+                    />
+                  </button>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {stop.siteName}
-                  </p>
-                  <p className="truncate text-[10px] text-white/65">
-                    {stop.access.walkMinutes} min till hållplats
-                  </p>
+
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${isStopOpen ? "max-h-225 opacity-100" : "max-h-0 opacity-0"}`}
+                >
+                  <div className="divide-y divide-white/6 px-2.5">
+                    {stopDepartures.map((departure, index) => {
+                      const actionLabel = getActionLabel(departure.reachability);
+                      const displayLabel = getDisplayLabel(departure);
+                      const tone = getTimeTone(
+                        displayLabel,
+                        departure.reachability?.status,
+                      );
+
+                      return (
+                        <div
+                          key={`${stop.siteId}-${departure.line}-${index}`}
+                          className="flex items-center justify-between gap-2.5 py-1.5"
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-500 text-[12px] font-semibold text-white">
+                              {departure.line ?? "-"}
+                            </div>
+
+                            <p className="truncate text-[15px] font-medium text-white">
+                              {departure.destination ?? "Okänd destination"}
+                            </p>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <p
+                              className={`font-mono text-[15px] font-semibold leading-none ${tone}`}
+                            >
+                              {displayLabel}
+                            </p>
+
+                            {actionLabel && departure.reachability && (
+                              <span
+                                className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.02em] ${getStatusBadgeTone(
+                                  departure.reachability.status,
+                                )}`}
+                              >
+                                {actionLabel}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="border-t border-white/8 px-2.5 py-1.5">
+                    <p className="text-sm text-emerald-300">
+                      Tips:{" "}
+                      {nextCatchableMinutes === null
+                        ? "Du missar de närmaste avgångarna"
+                        : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <ChevronDown className="shrink-0 text-white/45" size={14} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
