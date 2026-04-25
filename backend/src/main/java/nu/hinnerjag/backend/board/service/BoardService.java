@@ -1,10 +1,6 @@
 package nu.hinnerjag.backend.board.service;
 
-import nu.hinnerjag.backend.board.dto.BoardAccessResponse;
-import nu.hinnerjag.backend.board.dto.BoardDepartureResponse;
-import nu.hinnerjag.backend.board.dto.BoardResponse;
-import nu.hinnerjag.backend.board.dto.NearbyBoardResponse;
-import nu.hinnerjag.backend.board.dto.NearbyBoardSiteResponse;
+import nu.hinnerjag.backend.board.dto.*;
 import nu.hinnerjag.backend.external.trafiklab.transport.TrafiklabTransportClient;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDeparturesResponse;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSiteDto;
@@ -194,9 +190,4 @@ public class BoardService {
                 || (departure.line() != null && !METRO_LINES.contains(departure.line()));
     }
 
-    private record SiteWithDistance(
-            TransportSiteDto site,
-            double distanceMeters
-    ) {
-    }
 }
