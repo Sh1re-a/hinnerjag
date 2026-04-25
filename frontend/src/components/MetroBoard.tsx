@@ -1,4 +1,10 @@
-import { Bus, ChevronDown, Footprints, MoveRight, TrainFront } from "lucide-react";
+import {
+  Bus,
+  ChevronDown,
+  Footprints,
+  MoveRight,
+  TrainFront,
+} from "lucide-react";
 import type { NearbySite, Reachability } from "../hooks/useNearbyBoard";
 import { getStatusBadgeTone, getStatusTone } from "./boardUi";
 
@@ -88,7 +94,11 @@ function getTimeTone(
   return getStatusTone(status);
 }
 
-export function MetroBoard({ metro, isLoading, errorMessage }: MetroBoardProps) {
+export function MetroBoard({
+  metro,
+  isLoading,
+  errorMessage,
+}: MetroBoardProps) {
   const uniqueDepartures = metro ? getUniqueDepartures(metro.departures) : [];
   const visibleDepartures = uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
 
@@ -104,7 +114,9 @@ export function MetroBoard({ metro, isLoading, errorMessage }: MetroBoardProps) 
       <div className="mb-2 flex items-center justify-between px-0.5">
         <div className="inline-flex items-center gap-2 text-sky-400">
           <Bus size={16} />
-          <p className="text-[12px] font-semibold uppercase tracking-[0.12em]">TUNNELBANA</p>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em]">
+            TUNNELBANA
+          </p>
         </div>
 
         <button
@@ -184,7 +196,9 @@ export function MetroBoard({ metro, isLoading, errorMessage }: MetroBoardProps) 
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <p className={`font-mono text-[15px] font-semibold leading-none ${tone}`}>
+                      <p
+                        className={`font-mono text-[15px] font-semibold leading-none ${tone}`}
+                      >
                         {displayLabel}
                       </p>
 
@@ -205,7 +219,8 @@ export function MetroBoard({ metro, isLoading, errorMessage }: MetroBoardProps) 
 
             <div className="border-t border-white/8 px-2.5 py-1.5">
               <p className="text-sm text-emerald-300">
-                Tips: {nextCatchableMinutes === null
+                Tips:{" "}
+                {nextCatchableMinutes === null
                   ? "Du missar de närmaste avgångarna"
                   : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
               </p>
