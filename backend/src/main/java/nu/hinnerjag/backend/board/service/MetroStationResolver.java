@@ -11,31 +11,7 @@ import java.util.Map;
 @Service
 public class MetroStationResolver {
 
-    public String resolveMetroStationName(
-            TransportSiteDto site,
-            List<TransportStopPointFullDto> stopPoints
-    ) {
-        if (site.stopAreas() == null || site.stopAreas().isEmpty()) {
-            return site.name();
-        }
-
-        Map<Integer, String> metroStationNames = buildMetroStationIndex(stopPoints);
-
-        for (Integer stopAreaId : site.stopAreas()) {
-            if (stopAreaId == null) {
-                continue;
-            }
-
-            String stationName = metroStationNames.get(stopAreaId);
-            if (stationName != null && !stationName.isBlank()) {
-                return stationName;
-            }
-        }
-
-        return site.name();
-    }
-
-    private Map<Integer, String> buildMetroStationIndex(List<TransportStopPointFullDto> stopPoints) {
+    public Map<Integer, String> buildMetroStationIndex(List<TransportStopPointFullDto> stopPoints) {
         Map<Integer, String> index = new HashMap<>();
 
         for (TransportStopPointFullDto stopPoint : stopPoints) {
@@ -56,5 +32,27 @@ public class MetroStationResolver {
         }
 
         return index;
+    }
+
+    public String resolveMetroStationName(
+            TransportSiteDto site,
+            Map<Integer, String> metroStationIndex
+    ) {
+        if (site.stopAreas() == null || site.stopAreas().isEmpty()) {
+            return site.name();
+        }
+
+        for (Integer stopAreaId : site.stopAreas()) {
+            if (stopAreaId == null) {
+                continue;
+            }
+
+            String stationName = metroStationIndex.get(stopAreaId);
+            if (stationName != null && !stationName.isBlank()) {
+                return stationName;
+            }
+        }
+
+        return site.name();
     }
 }
