@@ -1,3 +1,33 @@
 spring:
   application:
     name: backend
+  cache:
+    type: caffeine
+
+app:
+  cors:
+    allowed-origins:
+      - "http://localhost:5173"
+      # - "https://din-frontend-domän.se"
+
+  board:
+    max-filtered-departures: 15
+    max-source-departures: 40
+    max-bus-stops: 3
+    bus-radius-meters: 500
+    metro-radius-meters: 1200
+    metro-lines: "10,11,13,14,17,18,19"
+    nearby-site-candidate-limit: 120
+
+  trafiklab:
+    base-url: "https://transport.integration.sl.se/v1"
+    connect-timeout-ms: 500
+    read-timeout-ms: 1500
+    retries: 2
+    retry-backoff-ms: 120
+
+cache:
+  trafiklab:
+    sites-ttl-seconds: 43200       # 12h
+    stop-points-ttl-seconds: 43200 # 12h
+    departures-ttl-seconds: 8      # kort TTL för live-data
