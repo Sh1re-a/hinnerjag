@@ -1,11 +1,5 @@
-import {
-  ChevronDown,
-  Footprints,
-  RefreshCw,
-  TrainFront,
-} from "lucide-react";
-import { useState } from "react";
-import type { NearbySite } from "../hooks/useNearbyBoard";
+import { Bus, ChevronDown, Footprints, MoveRight, TrainFront } from "lucide-react";
+import type { NearbySite, Reachability } from "../hooks/useNearbyBoard";
 import { getStatusBadgeTone, getStatusTone } from "./boardUi";
 
 type MetroBoardProps = {
@@ -14,8 +8,7 @@ type MetroBoardProps = {
   errorMessage: string | null;
 };
 
-const DEFAULT_VISIBLE = 5;
-const MAX_VISIBLE = 20;
+const VISIBLE_DEPARTURES = 4;
 
 function getDisplayLabel(departure: NearbySite["departures"][number]) {
   const minutes = departure.reachability?.minutesUntilDeparture;
@@ -48,22 +41,10 @@ function getUniqueDepartures(departures: NearbySite["departures"]) {
 }
 
 function getGoHint(site: NearbySite) {
-  const nextReachable = site.departures.find(
-    (departure) =>
-      departure.reachability && departure.reachability.status !== "MISS",
-  )?.reachability;
+  const walkMinutes = site.access.walkMinutes;
+  const platformMinutes = site.access.recommendedAccessMinutes;
 
-  const walkAndBuffer = `gång ${site.access.walkMinutes} + buffer ${site.access.bufferMinutes}`;
-
-  if (!nextReachable) {
-    return `Gå senast: nu (${walkAndBuffer})`;
-  }
-
-  if (nextReachable.recommendedWalkInMinutes <= 0) {
-    return `Gå senast: nu (${walkAndBuffer})`;
-  }
-
-  return `Gå senast om ${nextReachable.recommendedWalkInMinutes} min (${walkAndBuffer})`;
+  return `${walkMinutes} min till station • ca ${platformMinutes} min till perrong`;
 }
 
 function getActionLabel(
@@ -74,198 +55,164 @@ function getActionLabel(
   }
 
   if (reachability.status === "MISS") {
-    return "MISSAR";
+    return "Missar";
   }
 
-  if (reachability.status === "TIGHT") {
-    return reachability.recommendedGoNow ? "GÅ NU!" : "TVEKSAM";
+  if (reachability.recommendedGoNow || reachability.status === "TIGHT") {
+    return "Gå nu";
   }
 
-  if (reachability.recommendedGoNow) {
-    return "GÅ NU!";
-  }
-
-  const minutes = Math.max(1, reachability.recommendedWalkInMinutes);
-  return `Gå om ${minutes} min`;
+  return "Du hinner";
 }
 
-export function MetroBoard({
-  metro,
-  isLoading,
-  errorMessage,
-}: MetroBoardProps) {
-  const [showAllDepartures, setShowAllDepartures] = useState(false);
+function getTimeTone(
+  displayLabel: string,
+  status: Reachability["status"] | undefined,
+) {
+  if (status === "MISS") {
+    return "text-rose-400";
+  }
+
+  if (displayLabel.toLowerCase() === "nu") {
+    return "text-emerald-400";
+  }
+
+  const minuteMatch = displayLabel.match(/(\d+)\s*min/i);
+  if (minuteMatch) {
+    const minutes = Number(minuteMatch[1]);
+    if (minutes <= 3) {
+      return "text-amber-300";
+    }
+  }
+
+  return getStatusTone(status);
+}
+
+export function MetroBoard({ metro, isLoading, errorMessage }: MetroBoardProps) {
   const uniqueDepartures = metro ? getUniqueDepartures(metro.departures) : [];
-  const visibleDepartures = metro
-    ? uniqueDepartures.slice(
-        0,
-        showAllDepartures
-          ? Math.min(uniqueDepartures.length, MAX_VISIBLE)
-          : Math.min(uniqueDepartures.length, DEFAULT_VISIBLE),
-      )
-    : [];
+  const visibleDepartures = uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
 
-  const getTimeTone = (display: string | null, fallback: string) => {
-    if (!display) {
-      return fallback;
-    }
-
-    if (display.toLowerCase() === "nu") {
-      return "text-emerald-400";
-    }
-
-    const minuteMatch = display.match(/(\d+)\s*min/i);
-    if (minuteMatch) {
-      const minutes = Number(minuteMatch[1]);
-      if (minutes <= 3) {
-        return "text-amber-300";
-      }
-    }
-
-    return fallback;
-  };
+  const nextCatchableDeparture =
+    metro?.departures.find(
+      (departure) => departure.reachability?.status !== "MISS",
+    ) ?? null;
+  const nextCatchableMinutes =
+    nextCatchableDeparture?.reachability?.minutesUntilDeparture ?? null;
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#171c22]/95 p-3 text-white shadow-[0_18px_48px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-3.5">
-      <div className="flex items-center justify-between border-b border-white/8 pb-2.5">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/40">
-            Närmaste tunnelbana
-          </p>
-          <h2 className="mt-1 text-base font-semibold text-white">Live board</h2>
+    <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#171c22]/95 p-2.5 text-white shadow-[0_18px_48px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-3">
+      <div className="mb-2 flex items-center justify-between px-0.5">
+        <div className="inline-flex items-center gap-2 text-sky-400">
+          <Bus size={16} />
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em]">TUNNELBANA</p>
         </div>
 
-        <div className="flex items-center gap-2 text-emerald-400">
-          <RefreshCw size={14} />
-          <span className="text-xs font-medium uppercase tracking-[0.14em]">
-            Live
-          </span>
-        </div>
+        <button
+          className="inline-flex items-center gap-1 text-sm font-medium text-sky-400 transition hover:text-sky-300"
+          type="button"
+        >
+          Visa alla ({uniqueDepartures.length})
+          <MoveRight size={15} />
+        </button>
       </div>
 
-      {isLoading && (
-        <p className="mt-4 text-sm text-white/65">Hämtar avgångar...</p>
-      )}
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95">
+        <div className="flex items-start justify-between gap-2.5 border-b border-white/8 px-2.5 py-2.5">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+              <TrainFront size={16} />
+            </div>
 
-      {errorMessage && (
-        <p className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-          {errorMessage}
-        </p>
-      )}
-
-      {!isLoading && !errorMessage && !metro && (
-        <p className="mt-4 text-sm text-white/65">
-          Ingen tunnelbana hittades nära dig ännu.
-        </p>
-      )}
-
-      {metro && (
-        <div className="mt-2.5">
-          <div className="flex items-start justify-between gap-2.5 px-0.5">
-            <div className="flex min-w-0 items-start gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-                <TrainFront size={16} />
-              </div>
-
-              <div className="min-w-0">
-                <p className="truncate text-[16px] font-semibold leading-tight text-white">
-                  {metro.siteName}
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-white/70">
+            <div className="min-w-0">
+              <p className="truncate text-[16px] font-semibold leading-tight text-white">
+                {metro?.siteName ?? "-"}
+              </p>
+              {metro && (
+                <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-white/72">
                   <span className="inline-flex items-center gap-1.5">
                     <Footprints size={10} />
                     {getGoHint(metro)}
                   </span>
                 </div>
-              </div>
+              )}
             </div>
-
-            <ChevronDown className="mt-1 shrink-0 text-white/45" size={15} />
           </div>
 
-          <div className="mt-2.5 border-t border-white/8" />
+          <ChevronDown className="mt-1 shrink-0 text-white/45" size={15} />
+        </div>
 
-          <div
-            className={`divide-y divide-white/6 ${
-              showAllDepartures && visibleDepartures.length > 8
-                ? "max-h-78 overflow-y-auto pr-1"
-                : ""
-            }`}
-          >
-            {visibleDepartures.map((departure, index) => {
-              const fallbackTone = getStatusTone(departure.reachability?.status);
-              const actionLabel = getActionLabel(departure.reachability);
-              const displayLabel = getDisplayLabel(departure);
+        {isLoading && (
+          <p className="px-3 py-4 text-sm text-white/65">Hämtar avgångar...</p>
+        )}
 
-              return (
-                <div
-                  key={`${departure.line}-${departure.destination}-${index}`}
-                  className="flex items-center justify-between gap-2.5 py-1.5"
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-600 text-[12px] font-semibold text-white">
-                      {departure.line ?? "-"}
+        {errorMessage && (
+          <p className="m-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+            {errorMessage}
+          </p>
+        )}
+
+        {!isLoading && !errorMessage && !metro && (
+          <p className="px-3 py-4 text-sm text-white/65">
+            Ingen tunnelbana hittades nära dig ännu.
+          </p>
+        )}
+
+        {metro && (
+          <>
+            <div className="divide-y divide-white/6 px-2.5">
+              {visibleDepartures.map((departure, index) => {
+                const actionLabel = getActionLabel(departure.reachability);
+                const displayLabel = getDisplayLabel(departure);
+                const tone = getTimeTone(
+                  displayLabel,
+                  departure.reachability?.status,
+                );
+
+                return (
+                  <div
+                    key={`${departure.line}-${departure.destination}-${index}`}
+                    className="flex items-center justify-between gap-2.5 py-1.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-600 text-[12px] font-semibold text-white">
+                        {departure.line ?? "-"}
+                      </div>
+
+                      <p className="truncate text-[15px] font-medium text-white">
+                        {departure.destination ?? "Okänd destination"}
+                      </p>
                     </div>
 
-                    <p className="truncate text-[15px] font-medium text-white">
-                      {departure.destination ?? "Okänd destination"}
-                    </p>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <p className={`font-mono text-[15px] font-semibold leading-none ${tone}`}>
+                        {displayLabel}
+                      </p>
+
+                      {actionLabel && departure.reachability && (
+                        <span
+                          className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.02em] ${getStatusBadgeTone(
+                            departure.reachability.status,
+                          )}`}
+                        >
+                          {actionLabel}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <p
-                      className={`font-mono text-[15px] font-semibold leading-none ${getTimeTone(
-                        displayLabel,
-                        fallbackTone,
-                      )}`}
-                    >
-                      {displayLabel}
-                    </p>
-
-                    {actionLabel && departure.reachability && (
-                      <span
-                        className={`inline-flex rounded-full border px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.04em] ${getStatusBadgeTone(
-                          departure.reachability.status,
-                        )}`}
-                      >
-                        {actionLabel}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {uniqueDepartures.length > DEFAULT_VISIBLE && (
-            <button
-              className="mt-1 flex w-full items-center justify-center gap-1.5 border-t border-white/8 pt-2 text-[12px] font-medium text-sky-300 transition hover:text-sky-200"
-              type="button"
-              onClick={() => setShowAllDepartures((prev) => !prev)}
-            >
-              {showAllDepartures
-                ? "Visa färre"
-                : `Visa fler (${Math.min(uniqueDepartures.length, MAX_VISIBLE)})`}
-              <ChevronDown
-                size={14}
-                className={showAllDepartures ? "rotate-180" : ""}
-              />
-            </button>
-          )}
-
-          {uniqueDepartures.length > MAX_VISIBLE && showAllDepartures && (
-            <p className="mt-1 text-center text-[11px] text-white/45">
-              Visar {MAX_VISIBLE} av {uniqueDepartures.length} avgångar.
-            </p>
-          )}
-
-          {showAllDepartures && visibleDepartures.length > 8 && (
-            <p className="mt-1 text-center text-[11px] text-white/45">
-              Scrolla för fler avgångar.
-            </p>
-          )}
-        </div>
-      )}
+            <div className="border-t border-white/8 px-2.5 py-1.5">
+              <p className="text-sm text-emerald-300">
+                Tips: {nextCatchableMinutes === null
+                  ? "Du missar de närmaste avgångarna"
+                  : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
     </section>
   );
 }
