@@ -25,11 +25,11 @@ public class TrafiklabTransportClient {
 
     private final RestClient restClient = RestClient.create();
 
-    private List<TransportSiteDto> cachedSites;
-    private Instant cachedSitesAt;
+    private volatile List<TransportSiteDto> cachedSites;
+    private volatile Instant cachedSitesAt;
 
-    private List<TransportStopPointFullDto> cachedStopPoints;
-    private Instant cachedStopPointsAt;
+    private volatile List<TransportStopPointFullDto> cachedStopPoints;
+    private volatile Instant cachedStopPointsAt;
 
     private final Map<Integer, CachedDepartures> cachedDeparturesBySiteId = new ConcurrentHashMap<>();
 
@@ -40,16 +40,24 @@ public class TrafiklabTransportClient {
             return cached.response();
         }
 
-        String url = BASE_URL + "/sites/" + siteId + "/departures";
+        try {
+            String url = BASE_URL + "/sites/" + siteId + "/departures";
 
-        TransportDeparturesResponse response = restClient.get()
-                .uri(url)
-                .retrieve()
-                .body(TransportDeparturesResponse.class);
+            TransportDeparturesResponse response = restClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .body(TransportDeparturesResponse.class);
 
-        cachedDeparturesBySiteId.put(siteId, new CachedDepartures(response, Instant.now()));
+            cachedDeparturesBySiteId.put(siteId, new CachedDepartures(response, Instant.now()));
+            return response;
+        } catch (RestClientException exception) {
+            if (cached != null) {
+                System.out.println("Using stale cached departures for site " + siteId);
+                return cached.response();
+            }
 
-        return response;
+            throw exception;
+        }
     }
 
     public TransportDeparturesResponse fetchDeparturesBySiteIdSafely(Integer siteId) {
@@ -66,17 +74,32 @@ public class TrafiklabTransportClient {
             return cachedSites;
         }
 
-        String url = BASE_URL + "/sites?expand=true";
+        synchronized (this) {
+            if (cachedSites != null && !isExpired(cachedSitesAt, SITES_TTL)) {
+                return cachedSites;
+            }
 
-        List<TransportSiteDto> response = restClient.get()
-                .uri(url)
-                .retrieve()
-                .body(new ParameterizedTypeReference<List<TransportSiteDto>>() {});
+            try {
+                String url = BASE_URL + "/sites?expand=true";
 
-        cachedSites = response;
-        cachedSitesAt = Instant.now();
+                List<TransportSiteDto> response = restClient.get()
+                        .uri(url)
+                        .retrieve()
+                        .body(new ParameterizedTypeReference<List<TransportSiteDto>>() {});
 
-        return response;
+                cachedSites = response;
+                cachedSitesAt = Instant.now();
+
+                return response;
+            } catch (RestClientException exception) {
+                if (cachedSites != null) {
+                    System.out.println("Using stale cached sites because refresh failed.");
+                    return cachedSites;
+                }
+
+                throw exception;
+            }
+        }
     }
 
     public List<TransportStopPointFullDto> fetchStopPoints() {
@@ -84,17 +107,32 @@ public class TrafiklabTransportClient {
             return cachedStopPoints;
         }
 
-        String url = BASE_URL + "/stop-points";
+        synchronized (this) {
+            if (cachedStopPoints != null && !isExpired(cachedStopPointsAt, STOP_POINTS_TTL)) {
+                return cachedStopPoints;
+            }
 
-        List<TransportStopPointFullDto> response = restClient.get()
-                .uri(url)
-                .retrieve()
-                .body(new ParameterizedTypeReference<List<TransportStopPointFullDto>>() {});
+            try {
+                String url = BASE_URL + "/stop-points";
 
-        cachedStopPoints = response;
-        cachedStopPointsAt = Instant.now();
+                List<TransportStopPointFullDto> response = restClient.get()
+                        .uri(url)
+                        .retrieve()
+                        .body(new ParameterizedTypeReference<List<TransportStopPointFullDto>>() {});
 
-        return response;
+                cachedStopPoints = response;
+                cachedStopPointsAt = Instant.now();
+
+                return response;
+            } catch (RestClientException exception) {
+                if (cachedStopPoints != null) {
+                    System.out.println("Using stale cached stop points because refresh failed.");
+                    return cachedStopPoints;
+                }
+
+                throw exception;
+            }
+        }
     }
 
     private boolean isExpired(Instant cachedAt, Duration ttl) {
