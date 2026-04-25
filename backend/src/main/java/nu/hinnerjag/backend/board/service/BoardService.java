@@ -26,19 +26,21 @@ public class BoardService {
     private final BoardAccessService boardAccessService;
     private final BoardDepartureService boardDepartureService;
     private final MetroStationResolver metroStationResolver;
+    private final BoardCandidateService boardCandidateService;
 
     public BoardService(
             TrafiklabTransportClient trafiklabTransportClient,
             BoardDistanceService boardDistanceService,
             BoardAccessService boardAccessService,
             BoardDepartureService boardDepartureService,
-            MetroStationResolver metroStationResolver
+            MetroStationResolver metroStationResolver, BoardCandidateService boardCandidateService
     ) {
         this.trafiklabTransportClient = trafiklabTransportClient;
         this.boardDistanceService = boardDistanceService;
         this.boardAccessService = boardAccessService;
         this.boardDepartureService = boardDepartureService;
         this.metroStationResolver = metroStationResolver;
+        this.boardCandidateService = boardCandidateService;
     }
 
     public BoardResponse getBoard(Integer siteId) {
@@ -60,7 +62,8 @@ public class BoardService {
             stopPoints = List.of();
         }
 
-        List<SiteWithDistance> metroCandidates = buildCandidates(
+
+        List<SiteWithDistance> metroCandidates = boardCandidateService.buildCandidates(
                 sites,
                 userLat,
                 userLng,
@@ -68,7 +71,7 @@ public class BoardService {
                 NEARBY_SITE_CANDIDATE_LIMIT
         );
 
-        List<SiteWithDistance> busCandidates = buildCandidates(
+        List<SiteWithDistance> busCandidates = boardCandidateService.buildCandidates(
                 sites,
                 userLat,
                 userLng,
@@ -85,26 +88,6 @@ public class BoardService {
                 nearestMetro,
                 nearbyBusStops
         );
-    }
-
-    private List<SiteWithDistance> buildCandidates(
-            List<TransportSiteDto> sites,
-            double userLat,
-            double userLng,
-            double maxDistance,
-            int limit
-    ) {
-        return sites.stream()
-                .filter(site -> site != null && site.siteId() != null)
-                .filter(site -> site.lat() != null && site.lon() != null)
-                .map(site -> new SiteWithDistance(
-                        site,
-                        boardDistanceService.distanceMeters(userLat, userLng, site.lat(), site.lon())
-                ))
-                .filter(candidate -> candidate.distanceMeters() <= maxDistance)
-                .sorted(Comparator.comparingDouble(SiteWithDistance::distanceMeters))
-                .limit(limit)
-                .toList();
     }
 
     private NearbyBoardSiteResponse findNearestMetro(
