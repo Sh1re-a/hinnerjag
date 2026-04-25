@@ -29,7 +29,7 @@ public class BoardService {
     private static final int MAX_FILTERED_DEPARTURES = 15;
     private static final int MAX_SOURCE_DEPARTURES = 40;
     private static final int MAX_BUS_STOPS = 3;
-    private static final double BUS_RADIUS_METERS = 300.0;
+    private static final double BUS_RADIUS_METERS = 500.0;
     private static final double METRO_RADIUS_METERS = 1200.0;
     private static final Set<String> METRO_LINES = Set.of("10", "11", "13", "14", "17", "18", "19");
 
@@ -65,8 +65,8 @@ public class BoardService {
                         site,
                         distanceMeters(userLat, userLng, site.lat(), site.lon())
                 ))
+            .filter(candidate -> candidate.distanceMeters() <= METRO_RADIUS_METERS)
                 .sorted(Comparator.comparingDouble(SiteWithDistance::distanceMeters))
-                .limit(20)
                 .toList();
 
         NearbyBoardSiteResponse nearestMetro = findNearestMetro(nearbySites, stopPoints);
