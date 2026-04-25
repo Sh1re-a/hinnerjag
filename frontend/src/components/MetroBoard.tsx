@@ -1,10 +1,5 @@
-import {
-  Bus,
-  ChevronDown,
-  Footprints,
-  MoveRight,
-  TrainFront,
-} from "lucide-react";
+import { ChevronDown, Footprints, TrainFront } from "lucide-react";
+import { useState } from "react";
 import type { NearbySite, Reachability } from "../hooks/useNearbyBoard";
 import { getStatusBadgeTone, getStatusTone } from "./boardUi";
 
@@ -99,6 +94,8 @@ export function MetroBoard({
   isLoading,
   errorMessage,
 }: MetroBoardProps) {
+  const [isOpen, setIsOpen] = useState(true);
+
   const uniqueDepartures = metro ? getUniqueDepartures(metro.departures) : [];
   const visibleDepartures = uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
 
@@ -111,21 +108,13 @@ export function MetroBoard({
 
   return (
     <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#171c22]/95 p-2.5 text-white shadow-[0_18px_48px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-3">
-      <div className="mb-2 flex items-center justify-between px-0.5">
+      <div className="mb-2 px-0.5">
         <div className="inline-flex items-center gap-2 text-sky-400">
-          <Bus size={16} />
+          <TrainFront size={16} />
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em]">
             TUNNELBANA
           </p>
         </div>
-
-        <button
-          className="inline-flex items-center gap-1 text-sm font-medium text-sky-400 transition hover:text-sky-300"
-          type="button"
-        >
-          Visa alla ({uniqueDepartures.length})
-          <MoveRight size={15} />
-        </button>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95">
@@ -150,7 +139,19 @@ export function MetroBoard({
             </div>
           </div>
 
-          <ChevronDown className="mt-1 shrink-0 text-white/45" size={15} />
+          <button
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="mt-1 shrink-0 text-white/45 transition hover:text-white/70"
+            aria-label={
+              isOpen ? "Stäng tunnelbaneavgångar" : "Öppna tunnelbaneavgångar"
+            }
+            type="button"
+          >
+            <ChevronDown
+              className={`transition-transform duration-200 ${isOpen ? "rotate-180" : "rotate-0"}`}
+              size={15}
+            />
+          </button>
         </div>
 
         {isLoading && (
@@ -170,7 +171,9 @@ export function MetroBoard({
         )}
 
         {metro && (
-          <>
+          <div
+            className={`overflow-hidden transition-all duration-300 ${isOpen ? "max-h-225 opacity-100" : "max-h-0 opacity-0"}`}
+          >
             <div className="divide-y divide-white/6 px-2.5">
               {visibleDepartures.map((departure, index) => {
                 const actionLabel = getActionLabel(departure.reachability);
@@ -225,7 +228,7 @@ export function MetroBoard({
                   : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
               </p>
             </div>
-          </>
+          </div>
         )}
       </div>
     </section>
