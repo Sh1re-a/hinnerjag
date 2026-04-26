@@ -61,7 +61,9 @@ public class PlanningService {
         List<JourneySegmentResponse> segments = journeySegmentService.buildSegments(firstJourney);
         Integer walkingDurationMinutes = journeySegmentService.calculateWalkingDurationMinutes(firstJourney);
         List<JourneyStopResponse> stops = journeyStopService.buildStops(firstTransitLeg);
-        List<CoordinateResponse> polyline = journeyMapLineCreatorService.buildPolyline(firstJourney);
+        // Temporarily disabled polyline generation for demo performance.
+        // List<CoordinateResponse> polyline = journeyMapLineCreatorService.buildPolyline(firstJourney);
+        List<CoordinateResponse> polyline = List.of();
 
         String leaveAt = journeyTimingService.calculateLeaveAt(firstJourney);
         Integer leaveInMinutes = journeyTimingService.calculateLeaveInMinutes(firstJourney);
