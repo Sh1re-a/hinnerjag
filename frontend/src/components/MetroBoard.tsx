@@ -238,12 +238,16 @@ export function MetroBoard({
               {remainingDepartures > 0 && (
                 <button
                   onClick={() => setIsExpanded((prev) => !prev)}
-                  className="mt-2 inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-sm font-medium text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-white/20 hover:bg-white/10 hover:text-white"
                   type="button"
                 >
                   {isExpanded
                     ? "Visa färre avgångar"
                     : `Visa ${remainingDepartures} fler avgångar`}
+                  <ChevronDown
+                    className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-0"}`}
+                    size={14}
+                  />
                 </button>
               )}
             </div>
