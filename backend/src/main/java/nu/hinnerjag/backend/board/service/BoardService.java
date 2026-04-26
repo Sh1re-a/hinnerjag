@@ -29,7 +29,9 @@ public class BoardService {
 
     private static final int MAX_BUS_STOPS = 3;
     private static final double BUS_RADIUS_METERS = 500.0;
-    private static final double METRO_RADIUS_METERS = 1200.0;
+        // Increased slightly to include nearby stations that are a bit beyond 1.2km
+        // (e.g. to ensure Stadshagen is detected for addresses like Lustgårdsgatan 19)
+        private static final double METRO_RADIUS_METERS = 1500.0;
     private static final int METRO_CANDIDATE_LIMIT = 4;
     private static final int BUS_CANDIDATE_LIMIT = 6;
     private static final Set<String> METRO_LINES = Set.of("10", "11", "13", "14", "17", "18", "19");
