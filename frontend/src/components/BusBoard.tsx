@@ -1,13 +1,15 @@
 import { BusFront, ChevronDown, Footprints } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { NearbySite, Reachability } from "../hooks/useNearbyBoard";
 import { getStatusBadgeTone, getStatusTone } from "./boardUi";
 
 type BusBoardProps = {
   busStops: NearbySite[];
   isLoading: boolean;
+  errorMessage: string | null;
 };
 
+const VISIBLE_STOPS = 3;
 const VISIBLE_DEPARTURES = 2;
 
 function getDisplayLabel(departure: NearbySite["departures"][number]) {
@@ -85,10 +87,25 @@ function getTimeTone(
   return getStatusTone(status);
 }
 
-export function BusBoard({ busStops, isLoading }: BusBoardProps) {
+export function BusBoard({
+  busStops,
+  isLoading,
+  errorMessage,
+}: BusBoardProps) {
   const [openStopIds, setOpenStopIds] = useState<Set<number>>(new Set());
+  const [expandedStopIds, setExpandedStopIds] = useState<Set<number>>(new Set());
+  const hasOpenedDefaultStops = useRef(false);
 
-  const visibleStops = busStops.slice(0, 2);
+  const visibleStops = busStops.slice(0, VISIBLE_STOPS);
+
+  useEffect(() => {
+    if (hasOpenedDefaultStops.current || visibleStops.length === 0) {
+      return;
+    }
+
+    setOpenStopIds(new Set(visibleStops.map((stop) => stop.siteId)));
+    hasOpenedDefaultStops.current = true;
+  }, [visibleStops]);
 
   const toggleStopOpen = (siteId: number) => {
     setOpenStopIds((prev) => {
@@ -98,6 +115,20 @@ export function BusBoard({ busStops, isLoading }: BusBoardProps) {
       } else {
         next.add(siteId);
       }
+      return next;
+    });
+  };
+
+  const toggleShowMore = (siteId: number) => {
+    setExpandedStopIds((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(siteId)) {
+        next.delete(siteId);
+      } else {
+        next.add(siteId);
+      }
+
       return next;
     });
   };
@@ -119,7 +150,13 @@ export function BusBoard({ busStops, isLoading }: BusBoardProps) {
         </div>
       )}
 
-      {!isLoading && busStops.length === 0 && (
+      {errorMessage && (
+        <div className="mb-2 overflow-hidden rounded-2xl border border-rose-500/20 bg-rose-500/10">
+          <p className="px-3 py-4 text-sm text-rose-300">{errorMessage}</p>
+        </div>
+      )}
+
+      {!isLoading && !errorMessage && busStops.length === 0 && (
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95">
           <p className="px-3 py-4 text-sm text-white/65">
             Inga busshållplatser hittades.
@@ -131,8 +168,11 @@ export function BusBoard({ busStops, isLoading }: BusBoardProps) {
         <div className="space-y-2">
           {visibleStops.map((stop) => {
             const isStopOpen = openStopIds.has(stop.siteId);
+            const isExpanded = expandedStopIds.has(stop.siteId);
             const uniqueDepartures = getUniqueDepartures(stop.departures);
-              const stopDepartures = uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
+            const stopDepartures = isExpanded
+              ? uniqueDepartures
+              : uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
 
             const nextCatchableDeparture =
               stop.departures.find(
@@ -234,6 +274,16 @@ export function BusBoard({ busStops, isLoading }: BusBoardProps) {
                         ? "Du missar de närmaste avgångarna"
                         : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
                     </p>
+
+                    {uniqueDepartures.length > VISIBLE_DEPARTURES && (
+                      <button
+                        onClick={() => toggleShowMore(stop.siteId)}
+                        className="mt-2 text-sm font-medium text-white/75 transition hover:text-white"
+                        type="button"
+                      >
+                        {isExpanded ? "Visa färre avgångar" : "Visa fler avgångar"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

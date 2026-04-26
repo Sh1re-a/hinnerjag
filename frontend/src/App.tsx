@@ -93,6 +93,7 @@ function App() {
             <BusBoard
               busStops={nearbyBoardQuery.data?.nearbyBusStops ?? []}
               isLoading={nearbyBoardQuery.isLoading}
+              errorMessage={errorMessage}
             />
           </section>
         </div>
