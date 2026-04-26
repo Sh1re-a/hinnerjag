@@ -35,11 +35,19 @@ public class TrafiklabTransportClient {
     private final Map<DeparturesCacheKey, CachedDepartures> cachedDeparturesByKey = new ConcurrentHashMap<>();
 
     public TransportDeparturesResponse fetchDeparturesBySiteId(Integer siteId) {
-        return fetchDeparturesBySiteId(siteId, null);
+        return fetchDeparturesBySiteId(siteId, null, null);
     }
 
     public TransportDeparturesResponse fetchDeparturesBySiteId(Integer siteId, String transportMode) {
-        DeparturesCacheKey cacheKey = new DeparturesCacheKey(siteId, transportMode);
+        return fetchDeparturesBySiteId(siteId, transportMode, null);
+    }
+
+    public TransportDeparturesResponse fetchDeparturesBySiteId(
+            Integer siteId,
+            String transportMode,
+            Integer forecastMinutes
+    ) {
+        DeparturesCacheKey cacheKey = new DeparturesCacheKey(siteId, transportMode, forecastMinutes);
         CachedDepartures cached = cachedDeparturesByKey.get(cacheKey);
 
         if (cached != null && !isExpired(cached.cachedAt(), DEPARTURES_TTL)) {
@@ -47,7 +55,7 @@ public class TrafiklabTransportClient {
         }
 
         try {
-            String url = buildDeparturesUrl(siteId, transportMode);
+            String url = buildDeparturesUrl(siteId, transportMode, forecastMinutes);
 
             TransportDeparturesResponse response = restClient.get()
                     .uri(url)
@@ -67,12 +75,20 @@ public class TrafiklabTransportClient {
     }
 
     public TransportDeparturesResponse fetchDeparturesBySiteIdSafely(Integer siteId) {
-        return fetchDeparturesBySiteIdSafely(siteId, null);
+        return fetchDeparturesBySiteIdSafely(siteId, null, null);
     }
 
     public TransportDeparturesResponse fetchDeparturesBySiteIdSafely(Integer siteId, String transportMode) {
+        return fetchDeparturesBySiteIdSafely(siteId, transportMode, null);
+    }
+
+    public TransportDeparturesResponse fetchDeparturesBySiteIdSafely(
+            Integer siteId,
+            String transportMode,
+            Integer forecastMinutes
+    ) {
         try {
-            return fetchDeparturesBySiteId(siteId, transportMode);
+            return fetchDeparturesBySiteId(siteId, transportMode, forecastMinutes);
         } catch (RestClientException exception) {
             System.out.println("Skipping site " + siteId + " because departures lookup failed.");
             return null;
@@ -153,7 +169,7 @@ public class TrafiklabTransportClient {
         return cachedAt.plus(ttl).isBefore(Instant.now());
     }
 
-    private String buildDeparturesUrl(Integer siteId, String transportMode) {
+    private String buildDeparturesUrl(Integer siteId, String transportMode, Integer forecastMinutes) {
         StringBuilder url = new StringBuilder(BASE_URL)
                 .append("/sites/")
                 .append(siteId)
@@ -163,6 +179,10 @@ public class TrafiklabTransportClient {
 
         if (transportMode != null && !transportMode.isBlank()) {
             query.add("transport=" + transportMode);
+        }
+
+        if (forecastMinutes != null) {
+            query.add("forecast=" + forecastMinutes);
         }
 
         String queryString = query.toString();
@@ -181,7 +201,8 @@ public class TrafiklabTransportClient {
 
     private record DeparturesCacheKey(
             Integer siteId,
-            String transportMode
+            String transportMode,
+            Integer forecastMinutes
     ) {
     }
 }

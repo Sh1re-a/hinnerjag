@@ -22,6 +22,7 @@ public class BoardService {
 
         private static final String BUS_TRANSPORT_MODE = "BUS";
         private static final String METRO_TRANSPORT_MODE = "METRO";
+        private static final int NEARBY_FORECAST_MINUTES = 20;
 
     private static final int MAX_BUS_STOPS = 3;
     private static final double BUS_RADIUS_METERS = 500.0;
@@ -109,7 +110,8 @@ public class BoardService {
             TransportDeparturesResponse response =
                     trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
                             candidate.site().siteId(),
-                            METRO_TRANSPORT_MODE
+                            METRO_TRANSPORT_MODE,
+                            NEARBY_FORECAST_MINUTES
                     );
 
             String stationName = metroStationResolver.resolveMetroStationName(
@@ -156,7 +158,8 @@ public class BoardService {
             TransportDeparturesResponse response =
                                         trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
                                                         candidate.site().siteId(),
-                                                        BUS_TRANSPORT_MODE
+                                                    BUS_TRANSPORT_MODE,
+                                                    NEARBY_FORECAST_MINUTES
                                         );
 
             BoardAccessResponse access = boardAccessService.createBusAccess(candidate.distanceMeters());
