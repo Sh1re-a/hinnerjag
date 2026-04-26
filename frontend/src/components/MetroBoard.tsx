@@ -9,7 +9,7 @@ type MetroBoardProps = {
   errorMessage: string | null;
 };
 
-const VISIBLE_DEPARTURES = 2;
+const VISIBLE_DEPARTURES = 4;
 
 function getDisplayLabel(departure: NearbySite["departures"][number]) {
   const minutes = departure.reachability?.minutesUntilDeparture;
