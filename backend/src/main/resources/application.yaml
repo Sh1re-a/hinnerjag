@@ -21,8 +21,6 @@ app:
 
   trafiklab:
     base-url: "https://transport.integration.sl.se/v1"
-    connect-timeout-ms: 500
-    read-timeout-ms: 1500
     retries: 2
     retry-backoff-ms: 120
 

@@ -5,7 +5,6 @@ import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSiteDto;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportStopPointFullDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -40,8 +39,6 @@ public class TrafiklabTransportClient {
 
     public TrafiklabTransportClient(
             @Value("${app.trafiklab.base-url}") String baseUrl,
-            @Value("${app.trafiklab.connect-timeout-ms}") int connectTimeoutMs,
-            @Value("${app.trafiklab.read-timeout-ms}") int readTimeoutMs,
             @Value("${app.trafiklab.retries:0}") int retries,
             @Value("${app.trafiklab.retry-backoff-ms:0}") long retryBackoffMs
     ) {
@@ -49,7 +46,6 @@ public class TrafiklabTransportClient {
         this.retries = Math.max(0, retries);
         this.retryBackoffMs = Math.max(0, retryBackoffMs);
         this.restClient = RestClient.builder()
-                .requestFactory(createRequestFactory(connectTimeoutMs, readTimeoutMs))
                 .defaultHeader("Accept-Encoding", "gzip")
                 .build();
     }
@@ -126,7 +122,7 @@ public class TrafiklabTransportClient {
             }
 
             try {
-                String url = baseUrl + "/sites?expand=true";
+                String url = baseUrl + "/sites";
 
                 List<TransportSiteDto> response = fetchWithRetry(() -> restClient.get()
                     .uri(url)
@@ -145,6 +141,15 @@ public class TrafiklabTransportClient {
 
                 throw exception;
             }
+        }
+    }
+
+    public List<TransportSiteDto> fetchSitesSafely() {
+        try {
+            return fetchSites();
+        } catch (RestClientException exception) {
+            System.out.println("Skipping sites lookup because SL sites request failed.");
+            return List.of();
         }
     }
 
@@ -178,6 +183,15 @@ public class TrafiklabTransportClient {
 
                 throw exception;
             }
+        }
+    }
+
+    public List<TransportStopPointFullDto> fetchStopPointsSafely() {
+        try {
+            return fetchStopPoints();
+        } catch (RestClientException exception) {
+            System.out.println("Skipping stop points lookup because SL stop points request failed.");
+            return List.of();
         }
     }
 
@@ -231,13 +245,6 @@ public class TrafiklabTransportClient {
         }
 
         throw lastException;
-    }
-
-    private SimpleClientHttpRequestFactory createRequestFactory(int connectTimeoutMs, int readTimeoutMs) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
-        requestFactory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
-        return requestFactory;
     }
 
     private void pauseBeforeRetry() {

@@ -62,16 +62,13 @@ public class BoardService {
     }
 
     public NearbyBoardResponse getNearbyBoards(Double userLat, Double userLng) {
-        List<TransportSiteDto> sites = trafiklabTransportClient.fetchSites();
-        List<TransportStopPointFullDto> stopPoints = trafiklabTransportClient.fetchStopPoints();
+        List<TransportSiteDto> sites = trafiklabTransportClient.fetchSitesSafely();
 
-        if (sites == null) {
-            sites = List.of();
-        }
+                if (sites.isEmpty()) {
+                        return new NearbyBoardResponse(userLat, userLng, null, List.of());
+                }
 
-        if (stopPoints == null) {
-            stopPoints = List.of();
-        }
+                List<TransportStopPointFullDto> stopPoints = trafiklabTransportClient.fetchStopPointsSafely();
 
         Map<Integer, String> metroStationIndex = metroStationResolver.buildMetroStationIndex(stopPoints);
 
@@ -158,8 +155,8 @@ public class BoardService {
             TransportDeparturesResponse response =
                                         trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
                                                         candidate.site().siteId(),
-                                                    BUS_TRANSPORT_MODE,
-                                                    NEARBY_FORECAST_MINUTES
+                                                        BUS_TRANSPORT_MODE,
+                                                        NEARBY_FORECAST_MINUTES
                                         );
 
             BoardAccessResponse access = boardAccessService.createBusAccess(candidate.distanceMeters());
