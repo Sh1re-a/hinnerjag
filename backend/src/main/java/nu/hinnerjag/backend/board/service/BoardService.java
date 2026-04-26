@@ -23,6 +23,9 @@ public class BoardService {
         private static final String BUS_TRANSPORT_MODE = "BUS";
         private static final String METRO_TRANSPORT_MODE = "METRO";
         private static final int NEARBY_FORECAST_MINUTES = 20;
+        private static final int EXTENDED_FORECAST_MINUTES = 40;
+        private static final int MIN_METRO_DEPARTURES = 4;
+        private static final int MIN_BUS_DEPARTURES = 2;
 
     private static final int MAX_BUS_STOPS = 3;
     private static final double BUS_RADIUS_METERS = 500.0;
@@ -104,13 +107,6 @@ public class BoardService {
             Map<Integer, String> metroStationIndex
     ) {
         for (SiteWithDistance candidate : candidates) {
-            TransportDeparturesResponse response =
-                    trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
-                            candidate.site().siteId(),
-                            METRO_TRANSPORT_MODE,
-                            NEARBY_FORECAST_MINUTES
-                    );
-
             String stationName = metroStationResolver.resolveMetroStationName(
                     candidate.site(),
                     metroStationIndex
@@ -121,11 +117,13 @@ public class BoardService {
                     stationName
             );
 
-            List<BoardDepartureResponse> departures =
-                    boardDepartureService.mapDeparturesWithAccess(response, access);
-
-            List<BoardDepartureResponse> metroDepartures =
-                    boardDepartureService.prepareDepartures(departures, this::isMetroDeparture);
+            List<BoardDepartureResponse> metroDepartures = findPreparedDepartures(
+                    candidate.site().siteId(),
+                    access,
+                    METRO_TRANSPORT_MODE,
+                    this::isMetroDeparture,
+                    MIN_METRO_DEPARTURES
+            );
 
             if (!metroDepartures.isEmpty()) {
                 return new NearbyBoardSiteResponse(
@@ -152,20 +150,15 @@ public class BoardService {
                 continue;
             }
 
-            TransportDeparturesResponse response =
-                                        trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
-                                                        candidate.site().siteId(),
-                                                        BUS_TRANSPORT_MODE,
-                                                        NEARBY_FORECAST_MINUTES
-                                        );
-
             BoardAccessResponse access = boardAccessService.createBusAccess(candidate.distanceMeters());
 
-            List<BoardDepartureResponse> departures =
-                    boardDepartureService.mapDeparturesWithAccess(response, access);
-
-            List<BoardDepartureResponse> busDepartures =
-                    boardDepartureService.prepareDepartures(departures, this::isBusDeparture);
+            List<BoardDepartureResponse> busDepartures = findPreparedDepartures(
+                    candidate.site().siteId(),
+                    access,
+                    BUS_TRANSPORT_MODE,
+                    this::isBusDeparture,
+                    MIN_BUS_DEPARTURES
+            );
 
             if (busDepartures.isEmpty()) {
                 continue;
@@ -185,6 +178,53 @@ public class BoardService {
         }
 
         return result;
+    }
+
+    private List<BoardDepartureResponse> findPreparedDepartures(
+            Integer siteId,
+            BoardAccessResponse access,
+            String transportMode,
+            java.util.function.Predicate<BoardDepartureResponse> modeFilter,
+            int minimumCount
+    ) {
+        List<BoardDepartureResponse> departures = loadPreparedDepartures(
+                siteId,
+                access,
+                transportMode,
+                NEARBY_FORECAST_MINUTES,
+                modeFilter
+        );
+
+        if (departures.size() >= minimumCount) {
+            return departures;
+        }
+
+        List<BoardDepartureResponse> extendedDepartures = loadPreparedDepartures(
+                siteId,
+                access,
+                transportMode,
+                EXTENDED_FORECAST_MINUTES,
+                modeFilter
+        );
+
+        return extendedDepartures.size() > departures.size() ? extendedDepartures : departures;
+    }
+
+    private List<BoardDepartureResponse> loadPreparedDepartures(
+            Integer siteId,
+            BoardAccessResponse access,
+            String transportMode,
+            int forecastMinutes,
+            java.util.function.Predicate<BoardDepartureResponse> modeFilter
+    ) {
+        TransportDeparturesResponse response = trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
+                siteId,
+                transportMode,
+                forecastMinutes
+        );
+
+        List<BoardDepartureResponse> departures = boardDepartureService.mapDeparturesWithAccess(response, access);
+        return boardDepartureService.prepareDepartures(departures, modeFilter);
     }
 
     private boolean isMetroDeparture(BoardDepartureResponse departure) {
