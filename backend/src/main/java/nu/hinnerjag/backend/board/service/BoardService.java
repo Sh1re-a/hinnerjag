@@ -25,7 +25,7 @@ public class BoardService {
         private static final int NEARBY_FORECAST_MINUTES = 20;
         private static final int EXTENDED_FORECAST_MINUTES = 40;
         private static final int MIN_METRO_DEPARTURES = 4;
-        private static final int MIN_BUS_DEPARTURES = 2;
+        private static final int MIN_BUS_DEPARTURES = 4;
 
     private static final int MAX_BUS_STOPS = 3;
     private static final double BUS_RADIUS_METERS = 500.0;
