@@ -36,10 +36,11 @@ export type TripSummaryResponse = {
 };
 
 export function useJourneyPlan() {
-  return useMutation<TripSummaryResponse, Error, JourneyPlanRequest>((req: JourneyPlanRequest) =>
-    apiFetch<TripSummaryResponse>("/api/plans/journey", {
-      method: "POST",
-      body: JSON.stringify(req),
-    }),
-  );
+  return useMutation<TripSummaryResponse, Error, JourneyPlanRequest>({
+    mutationFn: (req: JourneyPlanRequest) =>
+      apiFetch<TripSummaryResponse>("/api/plans/journey", {
+        method: "POST",
+        body: JSON.stringify(req),
+      }),
+  });
 }
