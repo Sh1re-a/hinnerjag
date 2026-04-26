@@ -9,7 +9,7 @@ type MetroBoardProps = {
   errorMessage: string | null;
 };
 
-const VISIBLE_DEPARTURES = 4;
+const VISIBLE_DEPARTURES = 2;
 
 function getDisplayLabel(departure: NearbySite["departures"][number]) {
   const minutes = departure.reachability?.minutesUntilDeparture;
@@ -95,9 +95,16 @@ export function MetroBoard({
   errorMessage,
 }: MetroBoardProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const uniqueDepartures = metro ? getUniqueDepartures(metro.departures) : [];
-  const visibleDepartures = uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
+  const visibleDepartures = isExpanded
+    ? uniqueDepartures
+    : uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
+  const remainingDepartures = Math.max(
+    0,
+    uniqueDepartures.length - VISIBLE_DEPARTURES,
+  );
 
   const nextCatchableDeparture =
     metro?.departures.find(
@@ -227,6 +234,18 @@ export function MetroBoard({
                   ? "Du missar de närmaste avgångarna"
                   : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
               </p>
+
+              {remainingDepartures > 0 && (
+                <button
+                  onClick={() => setIsExpanded((prev) => !prev)}
+                  className="mt-2 inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+                  type="button"
+                >
+                  {isExpanded
+                    ? "Visa färre avgångar"
+                    : `Visa ${remainingDepartures} fler avgångar`}
+                </button>
+              )}
             </div>
           </div>
         )}

@@ -173,6 +173,10 @@ export function BusBoard({
             const stopDepartures = isExpanded
               ? uniqueDepartures
               : uniqueDepartures.slice(0, VISIBLE_DEPARTURES);
+            const remainingDepartures = Math.max(
+              0,
+              uniqueDepartures.length - VISIBLE_DEPARTURES,
+            );
 
             const nextCatchableDeparture =
               stop.departures.find(
@@ -275,13 +279,15 @@ export function BusBoard({
                         : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
                     </p>
 
-                    {uniqueDepartures.length > VISIBLE_DEPARTURES && (
+                    {remainingDepartures > 0 && (
                       <button
                         onClick={() => toggleShowMore(stop.siteId)}
-                        className="mt-2 text-sm font-medium text-white/75 transition hover:text-white"
+                        className="mt-2 inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
                         type="button"
                       >
-                        {isExpanded ? "Visa färre avgångar" : "Visa fler avgångar"}
+                        {isExpanded
+                          ? "Visa färre avgångar"
+                          : `Visa ${remainingDepartures} fler avgångar`}
                       </button>
                     )}
                   </div>
