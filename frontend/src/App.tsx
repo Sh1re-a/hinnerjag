@@ -11,11 +11,18 @@ import { useNearbyBoard } from "./hooks/useNearbyBoard";
 
 function App() {
   const [showLocationDialog, setShowLocationDialog] = useState(true);
+   const [manualPosition, setManualPosition] = useState<{ lat: number; lng: number; label: string } | null>(null);
 
   const { position, isLocating, locationError, requestPosition } =
     useCurrentPosition();
 
-  const nearbyBoardQuery = useNearbyBoard(position);
+    const activePosition = manualPosition
+    ? { lat: manualPosition.lat, lng: manualPosition.lng }
+    : position;
+
+
+    
+  const nearbyBoardQuery = useNearbyBoard(activePosition);
 
   const errorMessage =
     nearbyBoardQuery.error instanceof Error
@@ -29,9 +36,11 @@ function App() {
   const busWalkMinutes =
     nearbyBoardQuery.data?.nearbyBusStops[0]?.access.walkMinutes ?? null;
 
-  const addressLabel = position
-    ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
-    : "Din position";
+  const addressLabel = manualPosition
+    ? manualPosition.label
+    : position
+      ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
+      : "Din position";
 
   const handleAllowLocation = async () => {
     try {
@@ -60,7 +69,9 @@ function App() {
         />
 
         <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:max-w-3xl sm:px-6">
-          <LandingHeader addressLabel={addressLabel} />
+          <LandingHeader addressLabel={addressLabel}
+          onSelectAddress={(lat, lng, label) => setManualPosition({lat, lng, label})}
+          />
 
           {!position && !showLocationDialog && (
             <button
