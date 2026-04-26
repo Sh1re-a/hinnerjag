@@ -96,6 +96,49 @@ public class BoardService {
         NearbyBoardSiteResponse nearestMetro = findNearestMetro(metroCandidates, metroStationIndex);
         List<NearbyBoardSiteResponse> nearbyBusStops = findNearbyBusStops(busCandidates, nearestMetro);
 
+        // If we didn't find a metro among the dedicated metro candidates, perform
+        // a last‑resort check among the bus candidates to avoid missing stations
+        // that for some reason were classified differently by the sites API.
+        if (nearestMetro == null) {
+            for (SiteWithDistance candidate : busCandidates) {
+                String stationName = metroStationResolver.resolveMetroStationName(
+                        candidate.site(),
+                        metroStationIndex
+                );
+
+                BoardAccessResponse access = boardAccessService.createMetroAccess(
+                        candidate.distanceMeters(),
+                        stationName
+                );
+
+                List<BoardDepartureResponse> metroDepartures = findPreparedDepartures(
+                        candidate.site().siteId(),
+                        access,
+                        METRO_TRANSPORT_MODE,
+                        this::isMetroDeparture,
+                        MIN_METRO_DEPARTURES
+                );
+
+                if (!metroDepartures.isEmpty()) {
+                    nearestMetro = new NearbyBoardSiteResponse(
+                            candidate.site().siteId(),
+                            stationName,
+                            boardDistanceService.roundDistance(candidate.distanceMeters()),
+                            access,
+                            metroDepartures
+                    );
+
+                    // Remove this site from bus results if present
+                    int foundId = nearestMetro.siteId();
+                    nearbyBusStops = nearbyBusStops.stream()
+                            .filter(b -> !b.siteId().equals(foundId))
+                            .toList();
+
+                    break;
+                }
+            }
+        }
+
         return new NearbyBoardResponse(
                 userLat,
                 userLng,
