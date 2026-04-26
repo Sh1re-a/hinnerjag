@@ -227,8 +227,8 @@ export function MetroBoard({
               })}
             </div>
 
-            <div className="border-t border-white/8 px-2.5 py-1.5">
-              <p className="text-sm text-emerald-300">
+            <div className="flex items-center justify-between gap-3 border-t border-white/8 px-2.5 py-1.5">
+              <p className="min-w-0 text-sm text-emerald-300">
                 Tips:{" "}
                 {nextCatchableMinutes === null
                   ? "Du missar de närmaste avgångarna"
@@ -238,15 +238,15 @@ export function MetroBoard({
               {remainingDepartures > 0 && (
                 <button
                   onClick={() => setIsExpanded((prev) => !prev)}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-sm font-medium text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                  className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-white/55 transition hover:text-white"
                   type="button"
                 >
                   {isExpanded
-                    ? "Visa färre avgångar"
-                    : `Visa ${remainingDepartures} fler avgångar`}
+                    ? "Visa mindre"
+                    : `+${remainingDepartures} fler`}
                   <ChevronDown
                     className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-0"}`}
-                    size={14}
+                    size={13}
                   />
                 </button>
               )}
