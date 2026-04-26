@@ -6,12 +6,14 @@ import { DecisionCard } from "./components/DecisionCard";
 import { LandingHeader } from "./components/LandingHeader";
 import { LocationDialog } from "./components/LocationDialog";
 import { MetroBoard } from "./components/MetroBoard";
+import { JourneyModal } from "./components/JourneyModal";
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
 import { useNearbyBoard } from "./hooks/useNearbyBoard";
 
 function App() {
   const [showLocationDialog, setShowLocationDialog] = useState(true);
    const [manualPosition, setManualPosition] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  const [showJourneyModal, setShowJourneyModal] = useState(false);
 
   const { position, isLocating, locationError, requestPosition } =
     useCurrentPosition();
@@ -41,6 +43,12 @@ function App() {
     : position
       ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
       : "Din position";
+
+  const origin = manualPosition
+    ? { lat: manualPosition.lat, lng: manualPosition.lng, label: manualPosition.label }
+    : position
+      ? { lat: position.lat, lng: position.lng, label: addressLabel }
+      : null;
 
   const handleAllowLocation = async () => {
     try {
@@ -107,7 +115,8 @@ function App() {
           </section>
         </div>
 
-        <BottomJourneyCta />
+        <BottomJourneyCta onClick={() => setShowJourneyModal(true)} />
+        <JourneyModal open={showJourneyModal} onClose={() => setShowJourneyModal(false)} origin={origin} />
       </div>
     </main>
   );
