@@ -6,14 +6,14 @@ import { DecisionCard } from "./components/DecisionCard";
 import { LandingHeader } from "./components/LandingHeader";
 import { LocationDialog } from "./components/LocationDialog";
 import { MetroBoard } from "./components/MetroBoard";
-import { JourneyModal } from "./components/JourneyModal";
+import JourneyPage from "./pages/JourneyPage";
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
 import { useNearbyBoard } from "./hooks/useNearbyBoard";
 
 function App() {
   const [showLocationDialog, setShowLocationDialog] = useState(true);
    const [manualPosition, setManualPosition] = useState<{ lat: number; lng: number; label: string } | null>(null);
-  const [showJourneyModal, setShowJourneyModal] = useState(false);
+  const [currentView, setCurrentView] = useState<"landing" | "journey">("landing");
 
   const { position, isLocating, locationError, requestPosition } =
     useCurrentPosition();
@@ -44,11 +44,7 @@ function App() {
       ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
       : "Din position";
 
-  const origin = manualPosition
-    ? { lat: manualPosition.lat, lng: manualPosition.lng, label: manualPosition.label }
-    : position
-      ? { lat: position.lat, lng: position.lng, label: addressLabel }
-      : null;
+  // origin was previously used by the modal; kept via JourneyPage props instead
 
   const handleAllowLocation = async () => {
     try {
@@ -77,46 +73,54 @@ function App() {
         />
 
         <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:max-w-3xl sm:px-6">
-          <LandingHeader addressLabel={addressLabel}
-          onSelectAddress={(lat, lng, label) => setManualPosition({lat, lng, label})}
+          <LandingHeader
+            addressLabel={addressLabel}
+            onSelectAddress={(lat, lng, label) => setManualPosition({ lat, lng, label })}
           />
 
-          {!position && !showLocationDialog && (
-            <button
-              onClick={() => {
-                setShowLocationDialog(true);
-              }}
-              className="mt-4 rounded-full border border-white/10 bg-white/10 px-4 py-3 text-sm font-medium text-white/85 backdrop-blur transition hover:bg-white/15"
-              type="button"
-            >
-              Tillat location for att se boarden
-            </button>
+          {currentView === "landing" ? (
+            <>
+              {!position && !showLocationDialog && (
+                <button
+                  onClick={() => {
+                    setShowLocationDialog(true);
+                  }}
+                  className="mt-4 rounded-full border border-white/10 bg-white/10 px-4 py-3 text-sm font-medium text-white/85 backdrop-blur transition hover:bg-white/15"
+                  type="button"
+                >
+                  Tillat location for att se boarden
+                </button>
+              )}
+
+              <DecisionCard
+                platformMinutes={perrongMinutes}
+                platformWalkMinutes={platformWalkMinutes}
+                platformBufferMinutes={platformBufferMinutes}
+                busWalkMinutes={busWalkMinutes}
+              />
+
+              <section className="mt-2.5 grid gap-2.5 xl:grid-cols-[1.06fr,0.94fr] xl:items-start">
+                <MetroBoard
+                  metro={metro}
+                  isLoading={nearbyBoardQuery.isLoading}
+                  errorMessage={errorMessage}
+                />
+
+                <BusBoard
+                  busStops={nearbyBoardQuery.data?.nearbyBusStops ?? []}
+                  isLoading={nearbyBoardQuery.isLoading}
+                  errorMessage={errorMessage}
+                />
+              </section>
+            </>
+          ) : (
+            <div className="w-full">
+              <JourneyPage onBack={() => setCurrentView("landing")} />
+            </div>
           )}
-
-          <DecisionCard
-            platformMinutes={perrongMinutes}
-            platformWalkMinutes={platformWalkMinutes}
-            platformBufferMinutes={platformBufferMinutes}
-            busWalkMinutes={busWalkMinutes}
-          />
-
-          <section className="mt-2.5 grid gap-2.5 xl:grid-cols-[1.06fr,0.94fr] xl:items-start">
-            <MetroBoard
-              metro={metro}
-              isLoading={nearbyBoardQuery.isLoading}
-              errorMessage={errorMessage}
-            />
-
-            <BusBoard
-              busStops={nearbyBoardQuery.data?.nearbyBusStops ?? []}
-              isLoading={nearbyBoardQuery.isLoading}
-              errorMessage={errorMessage}
-            />
-          </section>
         </div>
 
-        <BottomJourneyCta onClick={() => setShowJourneyModal(true)} />
-        <JourneyModal open={showJourneyModal} onClose={() => setShowJourneyModal(false)} origin={origin} />
+        <BottomJourneyCta onClick={() => setCurrentView("journey")} />
       </div>
     </main>
   );
