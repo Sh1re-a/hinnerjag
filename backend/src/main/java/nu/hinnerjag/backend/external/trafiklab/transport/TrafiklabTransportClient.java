@@ -3,7 +3,9 @@ package nu.hinnerjag.backend.external.trafiklab.transport;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportDeparturesResponse;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportSiteDto;
 import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportStopPointFullDto;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -14,17 +16,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 @Component
 public class TrafiklabTransportClient {
 
-    private static final String BASE_URL = "https://transport.integration.sl.se/v1";
-
     private static final Duration SITES_TTL = Duration.ofHours(12);
     private static final Duration STOP_POINTS_TTL = Duration.ofHours(12);
-    private static final Duration DEPARTURES_TTL = Duration.ofSeconds(10);
+    private static final Duration DEPARTURES_TTL = Duration.ofSeconds(30);
 
-    private final RestClient restClient = RestClient.create();
+    private final String baseUrl;
+    private final int retries;
+    private final long retryBackoffMs;
+    private final RestClient restClient;
 
     private volatile List<TransportSiteDto> cachedSites;
     private volatile Instant cachedSitesAt;
@@ -33,6 +37,23 @@ public class TrafiklabTransportClient {
     private volatile Instant cachedStopPointsAt;
 
     private final Map<DeparturesCacheKey, CachedDepartures> cachedDeparturesByKey = new ConcurrentHashMap<>();
+
+        public TrafiklabTransportClient(
+            RestClient.Builder restClientBuilder,
+            @Value("${app.trafiklab.base-url}") String baseUrl,
+            @Value("${app.trafiklab.connect-timeout-ms}") int connectTimeoutMs,
+            @Value("${app.trafiklab.read-timeout-ms}") int readTimeoutMs,
+            @Value("${app.trafiklab.retries:0}") int retries,
+            @Value("${app.trafiklab.retry-backoff-ms:0}") long retryBackoffMs
+        ) {
+        this.baseUrl = baseUrl;
+        this.retries = Math.max(0, retries);
+        this.retryBackoffMs = Math.max(0, retryBackoffMs);
+        this.restClient = restClientBuilder
+            .requestFactory(createRequestFactory(connectTimeoutMs, readTimeoutMs))
+            .defaultHeader("Accept-Encoding", "gzip")
+            .build();
+        }
 
     public TransportDeparturesResponse fetchDeparturesBySiteId(Integer siteId) {
         return fetchDeparturesBySiteId(siteId, null, null);
@@ -57,10 +78,10 @@ public class TrafiklabTransportClient {
         try {
             String url = buildDeparturesUrl(siteId, transportMode, forecastMinutes);
 
-            TransportDeparturesResponse response = restClient.get()
-                    .uri(url)
-                    .retrieve()
-                    .body(TransportDeparturesResponse.class);
+            TransportDeparturesResponse response = fetchWithRetry(() -> restClient.get()
+                .uri(url)
+                .retrieve()
+                .body(TransportDeparturesResponse.class));
 
             cachedDeparturesByKey.put(cacheKey, new CachedDepartures(response, Instant.now()));
             return response;
@@ -106,12 +127,12 @@ public class TrafiklabTransportClient {
             }
 
             try {
-                String url = BASE_URL + "/sites?expand=true";
+                String url = baseUrl + "/sites?expand=true";
 
-                List<TransportSiteDto> response = restClient.get()
-                        .uri(url)
-                        .retrieve()
-                        .body(new ParameterizedTypeReference<List<TransportSiteDto>>() {});
+                List<TransportSiteDto> response = fetchWithRetry(() -> restClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<TransportSiteDto>>() {}));
 
                 cachedSites = response;
                 cachedSitesAt = Instant.now();
@@ -139,12 +160,12 @@ public class TrafiklabTransportClient {
             }
 
             try {
-                String url = BASE_URL + "/stop-points";
+                String url = baseUrl + "/stop-points";
 
-                List<TransportStopPointFullDto> response = restClient.get()
-                        .uri(url)
-                        .retrieve()
-                        .body(new ParameterizedTypeReference<List<TransportStopPointFullDto>>() {});
+                List<TransportStopPointFullDto> response = fetchWithRetry(() -> restClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<TransportStopPointFullDto>>() {}));
 
                 cachedStopPoints = response;
                 cachedStopPointsAt = Instant.now();
@@ -170,7 +191,7 @@ public class TrafiklabTransportClient {
     }
 
     private String buildDeparturesUrl(Integer siteId, String transportMode, Integer forecastMinutes) {
-        StringBuilder url = new StringBuilder(BASE_URL)
+        StringBuilder url = new StringBuilder(baseUrl)
                 .append("/sites/")
                 .append(siteId)
                 .append("/departures");
@@ -191,6 +212,46 @@ public class TrafiklabTransportClient {
         }
 
         return url.toString();
+    }
+
+    private <T> T fetchWithRetry(Supplier<T> request) {
+        RestClientException lastException = null;
+
+        for (int attempt = 0; attempt <= retries; attempt++) {
+            try {
+                return request.get();
+            } catch (RestClientException exception) {
+                lastException = exception;
+
+                if (attempt == retries) {
+                    break;
+                }
+
+                pauseBeforeRetry();
+            }
+        }
+
+        throw lastException;
+    }
+
+    private SimpleClientHttpRequestFactory createRequestFactory(int connectTimeoutMs, int readTimeoutMs) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
+        requestFactory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
+        return requestFactory;
+    }
+
+    private void pauseBeforeRetry() {
+        if (retryBackoffMs <= 0) {
+            return;
+        }
+
+        try {
+            Thread.sleep(retryBackoffMs);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Retry sleep interrupted", exception);
+        }
     }
 
     private record CachedDepartures(
