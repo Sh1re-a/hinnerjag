@@ -139,6 +139,80 @@ public class BoardService {
             }
         }
 
+                // Final fallback: if still no metro found, expand the search radius
+                // (but only check a limited number of nearest sites) to avoid missing
+                // stations due to classification/metadata inconsistencies.
+                if (nearestMetro == null) {
+                        // Collect already checked ids to avoid duplicate work
+                        java.util.Set<Integer> checked = new java.util.HashSet<>();
+                        for (SiteWithDistance s : metroCandidates) {
+                                if (s != null && s.site() != null && s.site().siteId() != null) {
+                                        checked.add(s.site().siteId());
+                                }
+                        }
+                        for (SiteWithDistance s : busCandidates) {
+                                if (s != null && s.site() != null && s.site().siteId() != null) {
+                                        checked.add(s.site().siteId());
+                                }
+                        }
+
+                        double expandedRadius = METRO_RADIUS_METERS * 2;
+                        int expandedLimit = Math.max(METRO_CANDIDATE_LIMIT * 3, METRO_CANDIDATE_LIMIT);
+
+                        List<SiteWithDistance> widerCandidates = boardCandidateService.buildCandidates(
+                                        sites,
+                                        userLat,
+                                        userLng,
+                                        expandedRadius,
+                                        expandedLimit
+                        );
+
+                        for (SiteWithDistance candidate : widerCandidates) {
+                                if (candidate == null || candidate.site() == null || candidate.site().siteId() == null) {
+                                        continue;
+                                }
+
+                                if (checked.contains(candidate.site().siteId())) {
+                                        continue;
+                                }
+
+                                String stationName = metroStationResolver.resolveMetroStationName(
+                                                candidate.site(),
+                                                metroStationIndex
+                                );
+
+                                BoardAccessResponse access = boardAccessService.createMetroAccess(
+                                                candidate.distanceMeters(),
+                                                stationName
+                                );
+
+                                List<BoardDepartureResponse> metroDepartures = findPreparedDepartures(
+                                                candidate.site().siteId(),
+                                                access,
+                                                METRO_TRANSPORT_MODE,
+                                                this::isMetroDeparture,
+                                                MIN_METRO_DEPARTURES
+                                );
+
+                                if (!metroDepartures.isEmpty()) {
+                                        nearestMetro = new NearbyBoardSiteResponse(
+                                                        candidate.site().siteId(),
+                                                        stationName,
+                                                        boardDistanceService.roundDistance(candidate.distanceMeters()),
+                                                        access,
+                                                        metroDepartures
+                                        );
+
+                                        int foundId = nearestMetro.siteId();
+                                        nearbyBusStops = nearbyBusStops.stream()
+                                                        .filter(b -> !b.siteId().equals(foundId))
+                                                        .toList();
+
+                                        break;
+                                }
+                        }
+                }
+
         return new NearbyBoardResponse(
                 userLat,
                 userLng,
