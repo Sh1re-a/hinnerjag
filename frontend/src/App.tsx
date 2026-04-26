@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { BottomJourneyCta } from "./components/BottomJourneyCta";
 import { BusBoard } from "./components/BusBoard";
@@ -25,6 +25,11 @@ function App() {
 
     
   const nearbyBoardQuery = useNearbyBoard(activePosition);
+
+  useEffect(() => {
+    // Debug: log nearby board response for troubleshooting missing metro
+    console.debug("nearbyBoard: position=", activePosition, "data=", nearbyBoardQuery.data);
+  }, [activePosition, nearbyBoardQuery.data]);
 
   const errorMessage =
     nearbyBoardQuery.error instanceof Error
