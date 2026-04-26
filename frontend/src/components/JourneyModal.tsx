@@ -94,10 +94,10 @@ export function JourneyModal({ open, onClose, origin }: Props) {
         <div className="flex gap-2">
           <button
             onClick={handlePlan}
-            disabled={!origin || !selected || plan.isLoading}
+            disabled={!origin || !selected || plan.isPending}
             className="btn btn-primary flex-1"
           >
-            {plan.isLoading ? "Planerar…" : "Planera resa"}
+            {plan.isPending ? "Planerar…" : "Planera resa"}
           </button>
           <button onClick={onClose} className="btn btn-ghost">Avbryt</button>
         </div>
