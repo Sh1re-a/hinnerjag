@@ -20,6 +20,9 @@ import java.util.Set;
 @Service
 public class BoardService {
 
+        private static final String BUS_TRANSPORT_MODE = "BUS";
+        private static final String METRO_TRANSPORT_MODE = "METRO";
+
     private static final int MAX_BUS_STOPS = 3;
     private static final double BUS_RADIUS_METERS = 500.0;
     private static final double METRO_RADIUS_METERS = 1200.0;
@@ -104,7 +107,10 @@ public class BoardService {
     ) {
         for (SiteWithDistance candidate : candidates) {
             TransportDeparturesResponse response =
-                    trafiklabTransportClient.fetchDeparturesBySiteIdSafely(candidate.site().siteId());
+                    trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
+                            candidate.site().siteId(),
+                            METRO_TRANSPORT_MODE
+                    );
 
             String stationName = metroStationResolver.resolveMetroStationName(
                     candidate.site(),
@@ -148,7 +154,10 @@ public class BoardService {
             }
 
             TransportDeparturesResponse response =
-                    trafiklabTransportClient.fetchDeparturesBySiteIdSafely(candidate.site().siteId());
+                                        trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
+                                                        candidate.site().siteId(),
+                                                        BUS_TRANSPORT_MODE
+                                        );
 
             BoardAccessResponse access = boardAccessService.createBusAccess(candidate.distanceMeters());
 
