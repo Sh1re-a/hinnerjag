@@ -3,6 +3,11 @@ import "./App.css";
 import { BottomJourneyCta } from "./components/BottomJourneyCta";
 import { BusBoard } from "./components/BusBoard";
 import { DecisionCard } from "./components/DecisionCard";
+import {
+  JourneySearchDialog,
+  type JourneyPlace,
+  type JourneySearchSelection,
+} from "./components/JourneySearchDialog";
 import { LandingHeader } from "./components/LandingHeader";
 import { LocationDialog } from "./components/LocationDialog";
 import { MetroBoard } from "./components/MetroBoard";
@@ -11,6 +16,9 @@ import { useNearbyBoard } from "./hooks/useNearbyBoard";
 
 function App() {
   const [showLocationDialog, setShowLocationDialog] = useState(true);
+  const [showJourneyDialog, setShowJourneyDialog] = useState(false);
+  const [journeySelection, setJourneySelection] =
+    useState<JourneySearchSelection | null>(null);
 
   const { position, isLocating, locationError, requestPosition } =
     useCurrentPosition();
@@ -32,6 +40,15 @@ function App() {
   const addressLabel = position
     ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
     : "Din position";
+  const currentLocation: JourneyPlace | null = position
+    ? {
+        id: "current-location",
+        name: addressLabel,
+        lat: position.lat,
+        lng: position.lng,
+        type: "current",
+      }
+    : null;
 
   const handleAllowLocation = async () => {
     try {
@@ -60,9 +77,23 @@ function App() {
         />
 
         <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:max-w-3xl sm:px-6">
-          <LandingHeader
-            addressLabel={addressLabel}
-          />
+          <LandingHeader addressLabel={addressLabel} />
+
+          {journeySelection && (
+            <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+              <p>
+                Resa: <span className="font-medium text-white">{journeySelection.origin.name}</span>
+                {" "}till <span className="font-medium text-white">{journeySelection.destination.name}</span>
+              </p>
+              {journeySelection.summary && (
+                <p className="mt-1 text-white/65">
+                  Ca {journeySelection.summary.realisticDurationMinutes ?? "-"} min
+                  {journeySelection.summary.recommendedLeaveInMinutes !== null &&
+                    ` • lämna om ${journeySelection.summary.recommendedLeaveInMinutes} min`}
+                </p>
+              )}
+            </div>
+          )}
 
           {!position && !showLocationDialog && (
             <button
@@ -98,7 +129,17 @@ function App() {
           </section>
         </div>
 
-        <BottomJourneyCta />
+        <BottomJourneyCta onClick={() => setShowJourneyDialog(true)} />
+
+        <JourneySearchDialog
+          currentLocation={currentLocation}
+          open={showJourneyDialog}
+          onClose={() => setShowJourneyDialog(false)}
+          onSelect={(selection) => {
+            setJourneySelection(selection);
+            setShowJourneyDialog(false);
+          }}
+        />
       </div>
     </main>
   );
