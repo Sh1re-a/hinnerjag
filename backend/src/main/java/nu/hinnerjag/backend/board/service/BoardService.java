@@ -24,7 +24,7 @@ public class BoardService {
         private static final String METRO_TRANSPORT_MODE = "METRO";
         private static final int NEARBY_FORECAST_MINUTES = 20;
         private static final int EXTENDED_FORECAST_MINUTES = 40;
-        private static final int MIN_METRO_DEPARTURES = 4;
+        private static final int MIN_METRO_DEPARTURES = 1;
         private static final int MIN_BUS_DEPARTURES = 4;
 
     private static final int MAX_BUS_STOPS = 3;
@@ -209,7 +209,27 @@ public class BoardService {
                 modeFilter
         );
 
-        return extendedDepartures.size() > departures.size() ? extendedDepartures : departures;
+                List<BoardDepartureResponse> best = extendedDepartures.size() > departures.size() ? extendedDepartures : departures;
+
+                if (best.size() >= minimumCount) {
+                        return best;
+                }
+
+                // Fallback: try fetching departures without a transport filter (null) to avoid
+                // missing matches when the API's transport parameter behaves unexpectedly.
+                if (transportMode != null) {
+                        List<BoardDepartureResponse> fallback = loadPreparedDepartures(
+                                        siteId,
+                                        access,
+                                        null,
+                                        EXTENDED_FORECAST_MINUTES,
+                                        modeFilter
+                        );
+
+                        return fallback.size() > best.size() ? fallback : best;
+                }
+
+                return best;
     }
 
     private List<BoardDepartureResponse> loadPreparedDepartures(
