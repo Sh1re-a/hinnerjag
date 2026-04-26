@@ -38,22 +38,21 @@ public class TrafiklabTransportClient {
 
     private final Map<DeparturesCacheKey, CachedDepartures> cachedDeparturesByKey = new ConcurrentHashMap<>();
 
-        public TrafiklabTransportClient(
-            RestClient.Builder restClientBuilder,
+    public TrafiklabTransportClient(
             @Value("${app.trafiklab.base-url}") String baseUrl,
             @Value("${app.trafiklab.connect-timeout-ms}") int connectTimeoutMs,
             @Value("${app.trafiklab.read-timeout-ms}") int readTimeoutMs,
             @Value("${app.trafiklab.retries:0}") int retries,
             @Value("${app.trafiklab.retry-backoff-ms:0}") long retryBackoffMs
-        ) {
+    ) {
         this.baseUrl = baseUrl;
         this.retries = Math.max(0, retries);
         this.retryBackoffMs = Math.max(0, retryBackoffMs);
-        this.restClient = restClientBuilder
-            .requestFactory(createRequestFactory(connectTimeoutMs, readTimeoutMs))
-            .defaultHeader("Accept-Encoding", "gzip")
-            .build();
-        }
+        this.restClient = RestClient.builder()
+                .requestFactory(createRequestFactory(connectTimeoutMs, readTimeoutMs))
+                .defaultHeader("Accept-Encoding", "gzip")
+                .build();
+    }
 
     public TransportDeparturesResponse fetchDeparturesBySiteId(Integer siteId) {
         return fetchDeparturesBySiteId(siteId, null, null);
