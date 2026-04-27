@@ -1,3 +1,6 @@
+server:
+  port: ${PORT:8080}
+
 spring:
   application:
     name: backend
@@ -6,9 +9,7 @@ spring:
 
 app:
   cors:
-    allowed-origins:
-      - "http://localhost:5173"
-      # - "https://din-frontend-domän.se"
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
 
   board:
     max-filtered-departures: 15
