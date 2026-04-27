@@ -71,3 +71,13 @@ export function getLineTone(departure: Departure) {
 
   return "bg-slate-600 text-white";
 }
+
+export type LeaveStatusKey = "SAFE" | "TIGHT" | "MISS";
+
+export function getStatusFromLeave(leaveMin?: number | null) {
+  if (leaveMin == null) return { label: "Risk", key: "TIGHT" as LeaveStatusKey };
+  if (leaveMin <= -3) return { label: "Missar", key: "MISS" as LeaveStatusKey };
+  if (leaveMin <= 3) return { label: "Gå nu", key: "TIGHT" as LeaveStatusKey };
+  if (leaveMin <= 10) return { label: "Tight", key: "TIGHT" as LeaveStatusKey };
+  return { label: "Du hinner", key: "SAFE" as LeaveStatusKey };
+}
