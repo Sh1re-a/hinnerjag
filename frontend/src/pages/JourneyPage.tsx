@@ -3,7 +3,6 @@ import { searchAddress } from "../hooks/useAddressSearch";
 import { useJourneyPlan } from "../hooks/useJourneyPlan";
 import type { JourneyPlanRequest, JourneyTrip } from "../hooks/useJourneyPlan";
 import { JourneyResults } from "../components/JourneyResults";
-import { JourneyDetail } from "../components/JourneyDetail";
 import { LocateFixed, Search } from "lucide-react";
 import JourneySummaryCard from "../components/JourneySummaryCard";
 import { OuterCard } from "../components/CardBase";
@@ -47,9 +46,7 @@ export function JourneyPage({
   const [showPlanner, setShowPlanner] = useState(true);
 
   const plan = useJourneyPlan();
-  const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
-  const [currentScreen, setCurrentScreen] = useState<"plan" | "detail">("plan");
 
   useEffect(() => {
     if (originPreset && !manualOriginMode) {
@@ -60,8 +57,6 @@ export function JourneyPage({
 
   useEffect(() => {
     setSelectedOptionIndex(0);
-    setSelectedSegment(null);
-    setCurrentScreen("plan");
   }, [plan.data]);
 
   const canSubmit = Boolean(origin && destination && !plan.isPending);
@@ -128,10 +123,8 @@ export function JourneyPage({
       destinationLng: destination.lng,
     };
 
-    setSelectedSegment(null);
     setSelectedOptionIndex(0);
     setShowPlanner(false);
-    setCurrentScreen("plan");
     plan.mutate(req);
   };
 
@@ -160,28 +153,7 @@ export function JourneyPage({
 
   return (
     <div className="mx-auto max-w-md px-1 pb-12 pt-1 text-white sm:max-w-3xl">
-      {currentScreen === "detail" && activeTrip ? (
-        <>
-          <div className="mb-2 flex items-center justify-between px-1">
-            <div className={sectionLabel}>Detaljerad resväg</div>
-            <button
-              type="button"
-              onClick={() => setCurrentScreen("plan")}
-              className={ghostButton}
-            >
-              Tillbaka
-            </button>
-          </div>
-
-          <JourneyDetail
-            data={activeTrip}
-            segmentIndex={selectedSegment ?? 0}
-            originLabel={origin?.label}
-            destinationLabel={resultTitle}
-          />
-        </>
-      ) : (
-        <>
+      <>
           <div className="mb-3 flex items-center justify-between px-1">
             <div className={sectionLabel}>Reseplanerare</div>
             {onBack && (
@@ -326,9 +298,7 @@ export function JourneyPage({
                 setOriginResults([]);
                 setDestResults([]);
                 setManualOriginMode(false);
-                setSelectedSegment(null);
                 setSelectedOptionIndex(0);
-                setCurrentScreen("plan");
                 setShowPlanner(true);
                 plan.reset();
               }}
@@ -372,22 +342,11 @@ export function JourneyPage({
             data={activeTrip}
             options={tripOptions}
             selectedOptionIndex={selectedOptionIndex}
-            onSelectOption={(index) => {
-              setSelectedOptionIndex(index);
-              setSelectedSegment(null);
-            }}
-            onSelectSegment={(index) => {
-              setSelectedSegment(index);
-              if (index !== null) {
-                setCurrentScreen("detail");
-              }
-            }}
-            selectedIndex={selectedSegment}
+            onSelectOption={setSelectedOptionIndex}
           />
         </div>
       )}
-        </>
-      )}
+      </>
     </div>
   );
 }
