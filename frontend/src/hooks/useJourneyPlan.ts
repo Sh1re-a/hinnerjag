@@ -34,6 +34,8 @@ export type JourneySegment = {
   line?: string | null;
   toward?: string | null;
   platform?: string | null;
+  departureTime?: string | null;
+  arrivalTime?: string | null;
 };
 
 export type JourneyStop = {
@@ -50,7 +52,7 @@ export type StationTiming = {
   arrivalReason?: string | null;
 };
 
-export type TripSummaryResponse = {
+export type JourneyTrip = {
   plannedDurationMinutes?: number | null;
   realtimeDurationMinutes?: number | null;
   walkingDurationMinutes?: number | null;
@@ -64,6 +66,10 @@ export type TripSummaryResponse = {
   stops?: JourneyStop[];
   stationTiming?: StationTiming | null;
   polyline?: { lat: number; lng: number }[]; // optional
+};
+
+export type TripSummaryResponse = JourneyTrip & {
+  options?: JourneyTrip[] | null;
 };
 
 export function useJourneyPlan() {

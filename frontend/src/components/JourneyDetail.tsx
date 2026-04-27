@@ -1,12 +1,12 @@
 import { useState } from "react";
-import type { TripSummaryResponse } from "../hooks/useJourneyPlan";
+import type { JourneyTrip } from "../hooks/useJourneyPlan";
 import { OuterCard } from "./CardBase";
 import TransportPill from "./TransportPill";
 import { sectionLabel, sectionTitle, smallText, subtleButton } from "./uiTokens";
 import { getJourneyFacts, getTimeline } from "../lib/journeyUi";
 
 type Props = {
-  data: TripSummaryResponse;
+  data: JourneyTrip;
   segmentIndex: number;
   originLabel?: string;
   destinationLabel?: string;
@@ -60,29 +60,30 @@ export function JourneyDetail({ data, segmentIndex, originLabel, destinationLabe
                 <div className="text-[14px] font-semibold text-white">{item.label}</div>
                 <div className="mt-0.5 text-[12px] leading-snug text-white/58">{item.detail}</div>
 
-                {index === 1 && timeline.transitLine && (
+                {item.transit && (
                   <div className="mt-2.5 overflow-hidden rounded-md bg-white/[0.03]">
                     <div className="flex items-start justify-between gap-3 px-3 py-2.5">
                       <div className="flex items-start gap-3">
-                        <TransportPill line={timeline.transitLine} mode={data.route?.mode} size="sm" />
+                        <TransportPill line={item.transit.line} mode={data.route?.mode} size="sm" />
                         <div>
                           <div className="text-[13px] font-semibold text-white">
-                            Mot {timeline.transitDirection ?? "din destination"}
+                            Mot {item.transit.direction ?? "din destination"}
                           </div>
                           <div className="mt-0.5 text-[11px] text-white/55">
-                            {[timeline.transitDurationLabel, `${timeline.transitStopCount} stopp`].filter(Boolean).join(" · ")}
+                            {[item.transit.durationLabel, `${item.transit.stopCount} stopp`].filter(Boolean).join(" · ")}
                           </div>
                         </div>
                       </div>
 
                       <div className="text-[11px] font-medium text-white/72">
-                        {timeline.transitWindow ?? "—"}
+                        {item.transit.window ?? "—"}
                       </div>
                     </div>
 
-                    <div className="border-t border-white/6 px-3 py-2">
-                      <div className="space-y-1.5">
-                        {timeline.transitStops.slice(0, 6).map((stop, stopIndex) => (
+                    {item.transit.stops.length > 0 && (
+                      <div className="border-t border-white/6 px-3 py-2">
+                        <div className="space-y-1.5">
+                          {item.transit.stops.slice(0, 6).map((stop, stopIndex) => (
                           <div
                             key={`${stop.name}-${stopIndex}`}
                             className="grid grid-cols-[36px_minmax(0,1fr)_22px] items-center gap-2 rounded-md bg-black/10 px-2.5 py-1.5"
@@ -95,14 +96,15 @@ export function JourneyDetail({ data, segmentIndex, originLabel, destinationLabe
                               {stop.platform ?? "—"}
                             </div>
                           </div>
-                        ))}
-                        {timeline.transitStops.length > 6 && (
-                          <div className="pt-1 text-[12px] text-white/45">
-                            +{timeline.transitStops.length - 6} fler stopp i detalj
-                          </div>
-                        )}
+                          ))}
+                          {item.transit.stops.length > 6 && (
+                            <div className="pt-1 text-[12px] text-white/45">
+                              +{item.transit.stops.length - 6} fler stopp i detalj
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>

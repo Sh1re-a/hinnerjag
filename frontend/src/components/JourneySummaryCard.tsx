@@ -1,8 +1,8 @@
 import JourneyCard from "./JourneyCard";
-import type { TripSummaryResponse } from "../hooks/useJourneyPlan";
+import type { JourneyTrip } from "../hooks/useJourneyPlan";
 
 type Props = {
-  data: TripSummaryResponse | null;
+  data: JourneyTrip | null;
 };
 
 export function JourneySummaryCard({ data }: Props) {

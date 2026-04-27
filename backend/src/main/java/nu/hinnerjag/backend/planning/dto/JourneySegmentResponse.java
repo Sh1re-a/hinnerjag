@@ -8,6 +8,8 @@ public record JourneySegmentResponse(
         String mode,
         String line,
         String toward,
-        String platform
+        String platform,
+        String departureTime,
+        String arrivalTime
 ) {
 }

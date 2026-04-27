@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import { LocateFixed, Search } from "lucide-react";
 import { BottomJourneyCta } from "./components/BottomJourneyCta";
 import { BusBoard } from "./components/BusBoard";
-import { DecisionCard } from "./components/DecisionCard";
 import { LandingHeader } from "./components/LandingHeader";
 import { LocationDialog } from "./components/LocationDialog";
 import { MetroBoard } from "./components/MetroBoard";
 import JourneyPage from "./pages/JourneyPage";
+import { searchAddress } from "./hooks/useAddressSearch";
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
 import { useNearbyBoard } from "./hooks/useNearbyBoard";
-import { heroTitle, sectionLabel, smallText } from "./components/uiTokens";
+import { heroTitle, iconButton, iconSize, inputClass, metaText, sectionLabel, smallText } from "./components/uiTokens";
 
 type AddressState = { lat: number; lng: number; label: string };
 
@@ -17,6 +18,9 @@ function App() {
   const [showLocationDialog, setShowLocationDialog] = useState(true);
   const [manualPosition, setManualPosition] = useState<AddressState | null>(null);
   const [currentView, setCurrentView] = useState<"landing" | "journey">("landing");
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<AddressState[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const { position, isLocating, locationError, requestPosition } =
     useCurrentPosition();
@@ -47,11 +51,6 @@ function App() {
     : position
       ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
       : "Din position";
-  const locationTitle = manualPosition
-    ? manualPosition.label.split(",")[0].trim()
-    : position
-      ? "Din position"
-      : "Ingen plats vald";
 
   const journeyOrigin = manualPosition
     ? manualPosition
@@ -65,6 +64,22 @@ function App() {
       setShowLocationDialog(false);
     } catch {
       // The location hook already stores a user-facing error message.
+    }
+  };
+
+  const handleSearch = async (value: string) => {
+    setQuery(value);
+    if (value.length < 2) {
+      setResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const searchResults = await searchAddress(value);
+      setResults(searchResults);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -86,10 +101,7 @@ function App() {
         />
 
         <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[414px] flex-col px-3 pb-22 pt-3 sm:max-w-3xl sm:px-6">
-          <LandingHeader
-            addressLabel={addressLabel}
-            onSelectAddress={(lat, lng, label) => setManualPosition({ lat, lng, label })}
-          />
+          <LandingHeader />
 
           {currentView === "landing" ? (
             <>
@@ -105,22 +117,99 @@ function App() {
                 </button>
               )}
 
-              <section className="mt-2.5">
-                <div className={sectionLabel}>Din plats</div>
-                <h1 className={heroTitle}>{locationTitle}</h1>
-                <p className={`mt-1.5 max-w-md ${smallText}`}>
-                  {activePosition
-                    ? "Uppdaterad just nu. Se om du hinner tunnelbanan eller bussen innan du går."
-                    : "Välj plats för att få en tydlig bild av vad du hinner just nu."}
-                </p>
+              <section className="mt-4 px-1">
+                <header className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sky-400/20 bg-sky-500/10 text-sky-300">
+                    <LocateFixed size={15} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={metaText}>Aktiv plats</p>
+                    <p className="mt-1 truncate text-[13px] text-white/72">{addressLabel}</p>
+                  </div>
+                </header>
+
+                <div className="mt-5 max-w-[260px]">
+                  <h1 className={heroTitle}>Hinner jag?</h1>
+                  <p className={`mt-2 max-w-[280px] ${smallText}`}>
+                    {activePosition
+                      ? "Se om du hinner innan du går."
+                      : "Välj plats för att få en tydlig bild av vad du hinner just nu."}
+                  </p>
+                </div>
+
+                <div className="mt-5 flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/32" />
+                    <input
+                      className={`${inputClass} pl-10`}
+                      placeholder="Sök adress eller plats..."
+                      value={query}
+                      onChange={(e) => {
+                        void handleSearch(e.target.value);
+                      }}
+                    />
+                  </div>
+                  <button type="button" className={iconButton} aria-label="Använd min position">
+                    <LocateFixed className={iconSize} />
+                  </button>
+                </div>
+
+                {isSearching && (
+                  <div className="mt-1 text-xs text-white/60">Söker…</div>
+                )}
+                {results.length > 0 && (
+                  <ul className="mt-2 overflow-hidden rounded-3xl border border-white/10 bg-[#1a2230] p-2">
+                    {results.map((result) => (
+                      <li key={result.label} className="list-none">
+                        <button
+                          className="block w-full rounded-2xl px-4 py-3 text-left text-sm text-white/85 transition hover:bg-white/5"
+                          onClick={() => {
+                            setQuery(result.label);
+                            setResults([]);
+                            setManualPosition(result);
+                          }}
+                          type="button"
+                        >
+                          {result.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
 
-              <DecisionCard
-                platformMinutes={perrongMinutes}
-                platformWalkMinutes={platformWalkMinutes}
-                platformBufferMinutes={platformBufferMinutes}
-                busWalkMinutes={busWalkMinutes}
-              />
+              <section className="mt-3">
+                <div className={sectionLabel}>Nära dig</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-3">
+                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-sky-300">
+                      Tunnelbana
+                    </div>
+                    <p className="mt-3 text-[18px] font-semibold leading-none text-emerald-300">
+                      {perrongMinutes === null ? "--" : `${perrongMinutes} min`}
+                    </p>
+                    <p className={`mt-2 ${smallText}`}>
+                      {platformWalkMinutes === null || platformBufferMinutes === null
+                        ? "gång + spärr/trappa"
+                        : `${platformWalkMinutes} min gång + ${platformBufferMinutes} min spärr/trappa`}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-3">
+                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-sky-300">
+                      Buss
+                    </div>
+                    <p className="mt-3 text-[18px] font-semibold leading-none text-emerald-300">
+                      {busWalkMinutes === null ? "--" : `${busWalkMinutes} min`}
+                    </p>
+                    <p className={`mt-2 ${smallText}`}>Gångavstånd till hållplats</p>
+                  </div>
+                </div>
+
+                <p className={`mt-2 ${smallText}`}>
+                  Beräknat från där du står till perrong eller hållplats.
+                </p>
+              </section>
 
               <section className="mt-2 grid gap-2 xl:grid-cols-[1.06fr,0.94fr] xl:items-start">
                 <MetroBoard

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { searchAddress } from "../hooks/useAddressSearch";
 import { useJourneyPlan } from "../hooks/useJourneyPlan";
-import type { JourneyPlanRequest } from "../hooks/useJourneyPlan";
+import type { JourneyPlanRequest, JourneyTrip } from "../hooks/useJourneyPlan";
 import { JourneyResults } from "../components/JourneyResults";
 import { JourneyDetail } from "../components/JourneyDetail";
-import { ArrowLeft, LocateFixed, Search } from "lucide-react";
+import { LocateFixed, Search } from "lucide-react";
 import JourneySummaryCard from "../components/JourneySummaryCard";
 import { OuterCard } from "../components/CardBase";
 import { getJourneyHeader } from "../lib/journeyUi";
@@ -48,6 +48,8 @@ export function JourneyPage({
 
   const plan = useJourneyPlan();
   const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
+  const [currentScreen, setCurrentScreen] = useState<"plan" | "detail">("plan");
 
   useEffect(() => {
     if (originPreset && !manualOriginMode) {
@@ -55,6 +57,12 @@ export function JourneyPage({
       setOriginQuery(originPreset.label);
     }
   }, [originPreset, manualOriginMode]);
+
+  useEffect(() => {
+    setSelectedOptionIndex(0);
+    setSelectedSegment(null);
+    setCurrentScreen("plan");
+  }, [plan.data]);
 
   const canSubmit = Boolean(origin && destination && !plan.isPending);
   const originDisplayLabel = useMemo(() => {
@@ -68,10 +76,18 @@ export function JourneyPage({
     if (destQuery) return destQuery;
     return "Din resa";
   }, [destination?.label, destQuery]);
+  const tripOptions = useMemo<JourneyTrip[]>(() => {
+    if (!plan.data) return [];
+    if (plan.data.options && plan.data.options.length > 0) {
+      return plan.data.options;
+    }
+    return [plan.data];
+  }, [plan.data]);
+  const activeTrip = tripOptions[selectedOptionIndex] ?? tripOptions[0] ?? null;
   const journeyHeader = useMemo(() => {
-    if (!plan.data) return null;
-    return getJourneyHeader(plan.data, origin?.label, resultTitle);
-  }, [origin?.label, plan.data, resultTitle]);
+    if (!activeTrip) return null;
+    return getJourneyHeader(activeTrip, origin?.label, resultTitle);
+  }, [activeTrip, origin?.label, resultTitle]);
 
   const handleOriginSearch = async (q: string) => {
     setOriginQuery(q);
@@ -113,7 +129,9 @@ export function JourneyPage({
     };
 
     setSelectedSegment(null);
+    setSelectedOptionIndex(0);
     setShowPlanner(false);
+    setCurrentScreen("plan");
     plan.mutate(req);
   };
 
@@ -141,23 +159,37 @@ export function JourneyPage({
   };
 
   return (
-    <div className="mx-auto max-w-md px-1 pb-12 pt-2 text-white sm:max-w-3xl">
-      <header className="mb-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className={sectionLabel}>Resplanerare</p>
-            <h2 className={heroTitle}>Planera din resa</h2>
-            <p className="mt-1 max-w-sm text-[13px] text-white/60">Se om du hinner innan du går.</p>
-          </div>
-
-          {onBack && (
-            <button type="button" onClick={onBack} className={ghostButton}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+    <div className="mx-auto max-w-md px-1 pb-12 pt-1 text-white sm:max-w-3xl">
+      {currentScreen === "detail" && activeTrip ? (
+        <>
+          <div className="mb-2 flex items-center justify-between px-1">
+            <div className={sectionLabel}>Detaljerad resväg</div>
+            <button
+              type="button"
+              onClick={() => setCurrentScreen("plan")}
+              className={ghostButton}
+            >
               Tillbaka
             </button>
-          )}
-        </div>
-      </header>
+          </div>
+
+          <JourneyDetail
+            data={activeTrip}
+            segmentIndex={selectedSegment ?? 0}
+            originLabel={origin?.label}
+            destinationLabel={resultTitle}
+          />
+        </>
+      ) : (
+        <>
+          <div className="mb-3 flex items-center justify-between px-1">
+            <div className={sectionLabel}>Reseplanerare</div>
+            {onBack && (
+              <button type="button" onClick={onBack} className={ghostButton}>
+                Tillbaka
+              </button>
+            )}
+          </div>
 
       <OuterCard>
         {plan.data && !showPlanner ? (
@@ -295,6 +327,8 @@ export function JourneyPage({
                 setDestResults([]);
                 setManualOriginMode(false);
                 setSelectedSegment(null);
+                setSelectedOptionIndex(0);
+                setCurrentScreen("plan");
                 setShowPlanner(true);
                 plan.reset();
               }}
@@ -313,7 +347,7 @@ export function JourneyPage({
         </div>
       )}
 
-      {plan.data && (
+      {activeTrip && (
         <div className="mt-4">
           {journeyHeader && (
             <div className="mb-3">
@@ -332,23 +366,27 @@ export function JourneyPage({
             </div>
           )}
 
-          <JourneySummaryCard data={plan.data} />
+          <JourneySummaryCard data={activeTrip} />
 
           <JourneyResults
-            data={plan.data}
-            onSelectSegment={(index) => setSelectedSegment(index)}
+            data={activeTrip}
+            options={tripOptions}
+            selectedOptionIndex={selectedOptionIndex}
+            onSelectOption={(index) => {
+              setSelectedOptionIndex(index);
+              setSelectedSegment(null);
+            }}
+            onSelectSegment={(index) => {
+              setSelectedSegment(index);
+              if (index !== null) {
+                setCurrentScreen("detail");
+              }
+            }}
             selectedIndex={selectedSegment}
           />
-
-          {selectedSegment !== null && (
-            <JourneyDetail
-              data={plan.data}
-              segmentIndex={selectedSegment}
-              originLabel={origin?.label}
-              destinationLabel={resultTitle}
-            />
-          )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

@@ -1,17 +1,18 @@
-import type { TripSummaryResponse } from "../hooks/useJourneyPlan";
+import type { JourneyTrip } from "../hooks/useJourneyPlan";
 import { getStatusBadgeTone, getStatusFromLeave } from "./boardUi";
 import { OuterCard } from "./CardBase";
 import { badgeBase, metaText, mutedXs, smallText } from "./uiTokens";
 
 type Props = {
-  data: TripSummaryResponse;
+  data: JourneyTrip;
   variant?: "summary" | "option";
   isSelected?: boolean;
   isPrimary?: boolean;
   onSelect?: () => void;
+  optionLabel?: string | null;
 };
 
-export default function JourneyCard({ data, variant = "option", isSelected, isPrimary, onSelect }: Props) {
+export default function JourneyCard({ data, variant = "option", isSelected, isPrimary, onSelect, optionLabel }: Props) {
   const route = data.route ?? {};
   const leaveMin = data.recommendedLeaveInMinutes ?? null;
   const status = getStatusFromLeave(leaveMin);
@@ -70,6 +71,11 @@ export default function JourneyCard({ data, variant = "option", isSelected, isPr
               {isPrimary && (
                 <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300">
                   Bästa alternativet
+                </span>
+              )}
+              {!isPrimary && optionLabel && (
+                <span className="inline-flex rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">
+                  {optionLabel}
                 </span>
               )}
               <span className={`${badgeBase} ${getStatusBadgeTone(status.key as any)}`}>{status.label}</span>

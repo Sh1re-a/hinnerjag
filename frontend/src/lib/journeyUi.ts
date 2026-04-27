@@ -1,8 +1,8 @@
 import type {
+  JourneyTrip,
   JourneySegment,
   JourneyStop,
   StationTiming,
-  TripSummaryResponse,
 } from "../hooks/useJourneyPlan";
 import { getStatusFromLeave } from "../components/boardUi";
 
@@ -18,10 +18,18 @@ type TimelineItem = {
   label: string;
   detail: string;
   kind: "walk" | "station" | "arrival";
+  transit?: {
+    line: string | null;
+    direction: string | null;
+    window: string | null;
+    durationLabel: string | null;
+    stopCount: number;
+    stops: JourneyStop[];
+  } | null;
 };
 
 export function getJourneyHeader(
-  data: TripSummaryResponse,
+  data: JourneyTrip,
   originLabel?: string,
   destinationLabel?: string,
 ) {
@@ -52,7 +60,7 @@ export function getJourneyHeader(
   };
 }
 
-export function getJourneyInsights(data: TripSummaryResponse): JourneyInsightItem[] {
+export function getJourneyInsights(data: JourneyTrip): JourneyInsightItem[] {
   const items: JourneyInsightItem[] = [];
   const route = data.route ?? {};
   const insights = data.insights ?? {};
@@ -91,7 +99,7 @@ export function getJourneyInsights(data: TripSummaryResponse): JourneyInsightIte
   return items.slice(0, 3);
 }
 
-export function getJourneyFacts(data: TripSummaryResponse) {
+export function getJourneyFacts(data: JourneyTrip) {
   const route = data.route ?? {};
   const stops = data.stops ?? [];
 
@@ -108,99 +116,126 @@ export function getJourneyFacts(data: TripSummaryResponse) {
   ];
 }
 
-export function getTransitStops(data: TripSummaryResponse): JourneyStop[] {
+export function getTransitStops(data: JourneyTrip): JourneyStop[] {
   const stops = data.stops ?? [];
   if (stops.length === 0) return [];
   return stops;
 }
 
-export function getTimeline(data: TripSummaryResponse, originLabel?: string, destinationLabel?: string) {
+export function getTimeline(data: JourneyTrip, originLabel?: string, destinationLabel?: string) {
   const segments = data.segments ?? [];
-  const route = data.route ?? {};
   const transitStops = getTransitStops(data);
-  const firstWalk = segments.find((segment) => segment.type === "WALK") ?? null;
-  const lastWalk = [...segments].reverse().find((segment) => segment.type === "WALK") ?? null;
-  const firstTransit = segments.find((segment) => segment.type === "TRANSIT") ?? null;
+  const transitSegments = segments.filter((segment) => segment.type === "TRANSIT");
   const status = getStatusFromLeave(data.recommendedLeaveInMinutes ?? null);
-
   const items: TimelineItem[] = [];
+  let transitIndex = 0;
 
-  if (firstWalk && route.departureTime) {
-    items.push({
-      time: shiftTime(route.departureTime, -(firstWalk.durationMinutes ?? 0)) ?? route.departureTime,
-      label: normalizeJourneyPlace(originLabel ?? firstWalk.from, "Din plats"),
-      detail: `Gå ${minutesLabel(firstWalk.durationMinutes)} till ${getDisplayPlace(firstWalk.to, "stationen")}`,
-      kind: "walk",
-    });
-  }
+  segments.forEach((segment, index) => {
+    const nextSegment = segments[index + 1] ?? null;
+    const isFirst = index === 0;
+    const isLast = index === segments.length - 1;
 
-  if (firstTransit && route.departureTime) {
+    if (segment.type === "WALK") {
+      items.push({
+        time: segment.departureTime ?? segment.arrivalTime ?? "—",
+        label: isFirst
+          ? normalizeJourneyPlace(originLabel ?? segment.from, "Din plats")
+          : getDisplayPlace(segment.from, "Byte"),
+        detail: isLast
+          ? `Gå ${minutesLabel(segment.durationMinutes)} till ${getDisplayPlace(destinationLabel ?? segment.to, "destination")}`
+          : `Gå ${minutesLabel(segment.durationMinutes)} till ${getDisplayPlace(segment.to, "stationen")}`,
+        kind: isLast ? "arrival" : "walk",
+        transit: null,
+      });
+      return;
+    }
+
+    const currentTransitIndex = transitIndex;
+    transitIndex += 1;
+    const hasSingleTransit = transitSegments.length === 1;
+
     items.push({
-      time: route.departureTime,
-      label: getDisplayPlace(firstTransit.from ?? route.boardingName, "Påstigning"),
-      detail: route.platform ? `Plattform ${route.platform}` : "Gå till plattformen",
+      time: segment.departureTime ?? "—",
+      label: getDisplayPlace(segment.from, "Påstigning"),
+      detail: buildTransitTimelineDetail(segment, currentTransitIndex > 0),
       kind: "station",
+      transit: {
+        line: segment.line ?? null,
+        direction: segment.toward ?? null,
+        window:
+          segment.departureTime && segment.arrivalTime
+            ? `${segment.departureTime}–${segment.arrivalTime}`
+            : null,
+        durationLabel: minutesLabel(segment.durationMinutes),
+        stopCount: hasSingleTransit ? Math.max(0, transitStops.length - 1) : 0,
+        stops: hasSingleTransit ? transitStops : [],
+      },
     });
-  }
 
-  if (firstTransit && route.arrivalTime) {
     items.push({
-      time: route.arrivalTime,
-      label: getDisplayPlace(firstTransit.to ?? route.destinationName, "Avstigning"),
-      detail: route.platform ? `Ankomst plattform ${route.platform}` : "Kliv av här",
-      kind: "station",
+      time: segment.arrivalTime ?? "—",
+      label: getDisplayPlace(segment.to, "Avstigning"),
+      detail: nextSegment?.type === "TRANSIT"
+        ? `Byt här till ${buildTransitName(nextSegment)}`
+        : nextSegment?.type === "WALK"
+          ? "Kliv av här och gå sista biten"
+          : "Kliv av här",
+      kind: nextSegment?.type === "TRANSIT" ? "station" : "arrival",
+      transit: null,
     });
-  }
-
-  if (lastWalk && route.arrivalTime) {
-    items.push({
-      time: shiftTime(route.arrivalTime, lastWalk.durationMinutes ?? 0) ?? route.arrivalTime,
-      label: getDisplayPlace(destinationLabel ?? lastWalk.to, "Framme"),
-      detail: `Gå ${minutesLabel(lastWalk.durationMinutes)} till destination`,
-      kind: "arrival",
-    });
-  }
+  });
 
   return {
     items,
-    transitStops,
-    transitLine: route.line ?? null,
-    transitDirection: route.toward ?? null,
-    transitWindow: route.departureTime && route.arrivalTime ? `${route.departureTime}–${route.arrivalTime}` : null,
-    transitDurationLabel: firstTransit ? minutesLabel(firstTransit.durationMinutes) : null,
-    transitStopCount: Math.max(0, transitStops.length - 1),
     walkingLabel: minutesLabel(data.walkingDurationMinutes),
-    totalLabel: minutesLabel(data.plannedDurationMinutes),
+    totalLabel: minutesLabel(data.realisticDurationMinutes ?? data.plannedDurationMinutes),
     arrivalStatus: status.label,
   };
 }
 
-export function getSummarySteps(data: TripSummaryResponse) {
+export function getSummarySteps(data: JourneyTrip) {
   const segments = data.segments ?? [];
+  let transitIndex = 0;
 
-  return segments.map((segment) => ({
-    label: buildStepLabel(segment),
-    detail: buildStepDetail(segment),
+  return segments.map((segment, index) => {
+    const currentTransitIndex = segment.type === "TRANSIT" ? transitIndex++ : transitIndex;
+    return {
+    label: buildStepLabel(segment, index, currentTransitIndex),
+    detail: buildStepDetail(segment, index, segments.length),
     durationLabel: minutesLabel(segment.durationMinutes),
     line: segment.line,
     mode: segment.mode,
-  }));
+    };
+  });
 }
 
-function buildStepLabel(segment: JourneySegment) {
-  if (segment.type === "WALK") return "Gång";
-  if (segment.mode && segment.line) return `${segment.mode} ${segment.line}`;
+function buildStepLabel(segment: JourneySegment, index: number, transitIndex: number) {
+  if (segment.type === "WALK") {
+    return `Gå till ${getDisplayPlace(index === 0 ? segment.to : segment.to, "destination")}`;
+  }
+  if (segment.mode && segment.line) {
+    return transitIndex > 0 ? `Byt till ${segment.mode} ${segment.line}` : `Ta ${segment.mode} ${segment.line}`;
+  }
   return segment.mode ?? segment.type ?? "Ressteg";
 }
 
-function buildStepDetail(segment: JourneySegment) {
+function buildStepDetail(segment: JourneySegment, index: number, totalSegments: number) {
   if (segment.type === "WALK") {
-    return `${normalizeJourneyPlace(segment.from, "Din plats")} → ${getDisplayPlace(segment.to, "Framme")}`;
+    if (index === 0) {
+      return `Från ${normalizeJourneyPlace(segment.from, "Din plats")}`;
+    }
+    if (index === totalSegments - 1) {
+      return `Sista biten från ${getDisplayPlace(segment.from, "stationen")}`;
+    }
+    return `Gå mellan ${getDisplayPlace(segment.from, "byte")} och ${getDisplayPlace(segment.to, "nästa byte")}`;
   }
 
-  const direction = segment.toward ? `Mot ${segment.toward}` : null;
-  const platform = segment.platform ? `Spår ${segment.platform}` : null;
-  return [direction, platform].filter(Boolean).join(" · ") || `${getDisplayPlace(segment.from, "Påstigning")} → ${getDisplayPlace(segment.to, "Avstigning")}`;
+  const parts = [
+    `${getDisplayPlace(segment.from, "Påstigning")} → ${getDisplayPlace(segment.to, "Avstigning")}`,
+    segment.toward ? `Mot ${segment.toward}` : null,
+    segment.platform ? `Spår ${segment.platform}` : null,
+  ];
+  return parts.filter(Boolean).join(" · ");
 }
 
 function formatOccupancy(occupancy?: string | null) {
@@ -210,7 +245,7 @@ function formatOccupancy(occupancy?: string | null) {
     return {
       title: "Många sittplatser",
       badge: "Lugnt nu",
-      detail: (route: TripSummaryResponse["route"]) =>
+      detail: (route: JourneyTrip["route"]) =>
         `${route?.mode ?? "Resan"} ${route?.line ?? ""} har gott om plats just nu.`.trim(),
     };
   }
@@ -219,7 +254,7 @@ function formatOccupancy(occupancy?: string | null) {
     return {
       title: "Mycket folk",
       badge: "Fullt",
-      detail: (route: TripSummaryResponse["route"]) =>
+      detail: (route: JourneyTrip["route"]) =>
         `${route?.mode ?? "Resan"} ${route?.line ?? ""} är ganska full just nu.`.trim(),
     };
   }
@@ -227,7 +262,7 @@ function formatOccupancy(occupancy?: string | null) {
   return {
     title: "Normal beläggning",
     badge: "Realtid",
-    detail: (route: TripSummaryResponse["route"]) =>
+    detail: (route: JourneyTrip["route"]) =>
       `${route?.mode ?? "Resan"} ${route?.line ?? ""} ser normal ut just nu.`.trim(),
   };
 }
@@ -265,13 +300,29 @@ function minutesLabel(minutes?: number | null) {
   return `${minutes} min`;
 }
 
-function firstSegmentFrom(data: TripSummaryResponse) {
+function firstSegmentFrom(data: JourneyTrip) {
   return data.segments?.[0]?.from ?? null;
 }
 
-function lastSegmentTo(data: TripSummaryResponse) {
+function lastSegmentTo(data: JourneyTrip) {
   const segments = data.segments ?? [];
   return segments.length > 0 ? segments[segments.length - 1]?.to ?? null : null;
+}
+
+function buildTransitName(segment?: JourneySegment | null) {
+  if (!segment) return "nästa resa";
+  if (segment.mode && segment.line) return `${segment.mode} ${segment.line}`;
+  return segment.mode ?? "nästa resa";
+}
+
+function buildTransitTimelineDetail(segment: JourneySegment, isTransfer: boolean) {
+  const action = isTransfer ? `Byt till ${buildTransitName(segment)}` : `Ta ${buildTransitName(segment)}`;
+  const parts = [
+    action,
+    segment.toward ? `Mot ${segment.toward}` : null,
+    segment.platform ? `Spår ${segment.platform}` : null,
+  ];
+  return parts.filter(Boolean).join(" · ");
 }
 
 function getDisplayPlace(value?: string | null, fallback = "—") {
@@ -286,18 +337,4 @@ function normalizeJourneyPlace(value?: string | null, fallback = "—") {
 
 function isCoordinateLabel(value: string) {
   return /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(value);
-}
-
-function shiftTime(time: string, deltaMinutes: number) {
-  const [rawHour, rawMinute] = time.split(":");
-  const hour = Number(rawHour);
-  const minute = Number(rawMinute);
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
-
-  const shifted = hour * 60 + minute + deltaMinutes;
-  const safeMinutes = ((shifted % (24 * 60)) + 24 * 60) % (24 * 60);
-  const nextHour = Math.floor(safeMinutes / 60);
-  const nextMinute = safeMinutes % 60;
-
-  return `${String(nextHour).padStart(2, "0")}:${String(nextMinute).padStart(2, "0")}`;
 }

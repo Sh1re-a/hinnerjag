@@ -70,7 +70,9 @@ public class JourneySegmentService {
                 fieldExtractor.extractMode(transportation),
                 fieldExtractor.extractLine(transportation),
                 fieldExtractor.extractDirection(transportation),
-                fieldExtractor.extractPlatform(leg.origin())
+                fieldExtractor.extractPlatform(leg.origin()),
+                fieldExtractor.extractDepartureTime(leg),
+                fieldExtractor.extractArrivalTime(leg)
         );
     }
 
@@ -83,7 +85,9 @@ public class JourneySegmentService {
                 "Walk",
                 null,
                 null,
-                null
+                null,
+                fieldExtractor.extractDepartureTime(leg),
+                fieldExtractor.extractArrivalTime(leg)
         );
     }
 

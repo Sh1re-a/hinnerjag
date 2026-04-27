@@ -2,7 +2,7 @@ package nu.hinnerjag.backend.planning.dto;
 
 import java.util.List;
 
-public record TripSummaryResponse(
+public record TripOptionResponse(
         Integer plannedDurationMinutes,
         Integer realtimeDurationMinutes,
         Integer walkingDurationMinutes,
@@ -15,7 +15,6 @@ public record TripSummaryResponse(
         List<JourneySegmentResponse> segments,
         List<JourneyStopResponse> stops,
         List<CoordinateResponse> polyline,
-        StationTimingResponse stationTiming,
-        List<TripOptionResponse> options
+        StationTimingResponse stationTiming
 ) {
 }

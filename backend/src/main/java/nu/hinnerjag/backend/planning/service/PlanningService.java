@@ -8,6 +8,7 @@ import nu.hinnerjag.backend.external.trafiklab.journey.dto.TransportationDto;
 import nu.hinnerjag.backend.planning.dto.*;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -54,30 +55,67 @@ public class PlanningService {
 
     private TripSummaryResponse buildTripSummaryFromResponse(JourneyPlannerResponse response) {
         JourneyDto firstJourney = journeySelectionService.extractFirstJourney(response);
-        LegDto firstTransitLeg = journeySelectionService.findFirstTransitLeg(firstJourney);
+        TripOptionResponse primaryTrip = buildTripOption(firstJourney);
+        List<TripOptionResponse> options = buildTripOptions(response);
 
-        TripRouteResponse route = buildRoute(firstTransitLeg);
-        TripInsightResponse insights = buildInsights(firstTransitLeg);
-        List<JourneySegmentResponse> segments = journeySegmentService.buildSegments(firstJourney);
-        Integer walkingDurationMinutes = journeySegmentService.calculateWalkingDurationMinutes(firstJourney);
-        List<JourneyStopResponse> stops = journeyStopService.buildStops(firstTransitLeg);
-        // Temporarily disabled polyline generation for demo performance.
-        // List<CoordinateResponse> polyline = journeyMapLineCreatorService.buildPolyline(firstJourney);
-        List<CoordinateResponse> polyline = List.of();
-
-        String leaveAt = journeyTimingService.calculateLeaveAt(firstJourney);
-        Integer leaveInMinutes = journeyTimingService.calculateLeaveInMinutes(firstJourney);
-
-        StationTimingResponse stationTiming = journeyTimingService.getStationTiming(firstJourney);
-        Integer realisticDurationMinutes = journeyTimingService.calculateRealisticDurationMinutes(firstJourney);
         return new TripSummaryResponse(
-                fieldExtractor.secondsToMinutes(firstJourney.tripDuration()),
-                fieldExtractor.secondsToMinutes(firstJourney.tripRtDuration()),
+                primaryTrip.plannedDurationMinutes(),
+                primaryTrip.realtimeDurationMinutes(),
+                primaryTrip.walkingDurationMinutes(),
+                primaryTrip.realisticDurationMinutes(),
+                primaryTrip.recommendedLeaveAt(),
+                primaryTrip.recommendedLeaveInMinutes(),
+                primaryTrip.transfers(),
+                primaryTrip.route(),
+                primaryTrip.insights(),
+                primaryTrip.segments(),
+                primaryTrip.stops(),
+                primaryTrip.polyline(),
+                primaryTrip.stationTiming(),
+                options
+        );
+    }
+
+    private List<TripOptionResponse> buildTripOptions(JourneyPlannerResponse response) {
+        List<TripOptionResponse> options = new ArrayList<>();
+
+        if (response == null || response.journeys() == null) {
+            return options;
+        }
+
+        for (JourneyDto journey : response.journeys()) {
+            if (journey == null || journey.legs() == null || journey.legs().isEmpty()) {
+                continue;
+            }
+            options.add(buildTripOption(journey));
+        }
+
+        return options;
+    }
+
+    private TripOptionResponse buildTripOption(JourneyDto journey) {
+        LegDto firstTransitLeg = journeySelectionService.findFirstTransitLeg(journey);
+        LegDto lastTransitLeg = journeySelectionService.findLastTransitLeg(journey);
+
+        TripRouteResponse route = buildRoute(firstTransitLeg, lastTransitLeg);
+        TripInsightResponse insights = buildInsights(firstTransitLeg);
+        List<JourneySegmentResponse> segments = journeySegmentService.buildSegments(journey);
+        Integer walkingDurationMinutes = journeySegmentService.calculateWalkingDurationMinutes(journey);
+        List<JourneyStopResponse> stops = journeyStopService.buildStops(firstTransitLeg);
+        List<CoordinateResponse> polyline = List.of();
+        String leaveAt = journeyTimingService.calculateLeaveAt(journey);
+        Integer leaveInMinutes = journeyTimingService.calculateLeaveInMinutes(journey);
+        StationTimingResponse stationTiming = journeyTimingService.getStationTiming(journey);
+        Integer realisticDurationMinutes = journeyTimingService.calculateRealisticDurationMinutes(journey);
+
+        return new TripOptionResponse(
+                fieldExtractor.secondsToMinutes(journey.tripDuration()),
+                fieldExtractor.secondsToMinutes(journey.tripRtDuration()),
                 walkingDurationMinutes,
                 realisticDurationMinutes,
                 leaveAt,
                 leaveInMinutes,
-                firstJourney.interchanges(),
+                journey.interchanges(),
                 route,
                 insights,
                 segments,
@@ -87,18 +125,18 @@ public class PlanningService {
         );
     }
 
-    private TripRouteResponse buildRoute(LegDto transitLeg) {
-        TransportationDto transportation = transitLeg.transportation();
+    private TripRouteResponse buildRoute(LegDto firstTransitLeg, LegDto lastTransitLeg) {
+        TransportationDto transportation = firstTransitLeg.transportation();
 
         return new TripRouteResponse(
-                fieldExtractor.extractDepartureTime(transitLeg),
-                fieldExtractor.extractArrivalTime(transitLeg),
+                fieldExtractor.extractDepartureTime(firstTransitLeg),
+                fieldExtractor.extractArrivalTime(lastTransitLeg),
                 fieldExtractor.extractMode(transportation),
                 fieldExtractor.extractLine(transportation),
                 fieldExtractor.extractDirection(transportation),
-                fieldExtractor.extractPlaceName(transitLeg.origin()),
-                fieldExtractor.extractPlaceName(transitLeg.destination()),
-                fieldExtractor.extractPlatform(transitLeg.origin())
+                fieldExtractor.extractPlaceName(firstTransitLeg.origin()),
+                fieldExtractor.extractPlaceName(lastTransitLeg.destination()),
+                fieldExtractor.extractPlatform(firstTransitLeg.origin())
         );
     }
 

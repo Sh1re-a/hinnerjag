@@ -1,22 +1,56 @@
-import type { TripSummaryResponse } from "../hooks/useJourneyPlan";
+import type { JourneyTrip } from "../hooks/useJourneyPlan";
 import { OuterCard } from "./CardBase";
 import TransportPill from "./TransportPill";
 import { sectionLabel, sectionTitle, subtleButton } from "./uiTokens";
 import { getJourneyInsights, getSummarySteps } from "../lib/journeyUi";
+import JourneyCard from "./JourneyCard";
 
 type Props = {
-  data: TripSummaryResponse;
+  data: JourneyTrip;
+  options?: JourneyTrip[];
+  selectedOptionIndex?: number;
+  onSelectOption?: (idx: number) => void;
   onSelectSegment?: (idx: number | null) => void;
   selectedIndex?: number | null;
 };
 
-export function JourneyResults({ data, onSelectSegment, selectedIndex }: Props) {
+export function JourneyResults({
+  data,
+  options = [],
+  selectedOptionIndex = 0,
+  onSelectOption,
+  onSelectSegment,
+  selectedIndex,
+}: Props) {
   const previewSegments = getSummarySteps(data);
   const insights = getJourneyInsights(data);
   const detailsOpen = selectedIndex !== null;
+  const optionLabels = buildOptionLabels(options);
 
   return (
     <div className="mt-4 space-y-3">
+      {options.length > 1 && (
+        <div className="space-y-2">
+          <div>
+            <div className={sectionLabel}>Fler resor</div>
+            <h3 className={`mt-1 ${sectionTitle}`}>Välj den som passar bäst</h3>
+          </div>
+          <div className="space-y-2">
+            {options.map((option, index) => (
+              <JourneyCard
+                key={`${option.route?.departureTime ?? "trip"}-${index}`}
+                data={option}
+                variant="option"
+                isPrimary={index === 0}
+                isSelected={selectedOptionIndex === index}
+                optionLabel={optionLabels[index] ?? null}
+                onSelect={() => onSelectOption?.(index)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <OuterCard>
         <div className="mb-2 flex items-center justify-between gap-3">
           <div>
@@ -112,3 +146,21 @@ export function JourneyResults({ data, onSelectSegment, selectedIndex }: Props) 
 }
 
 export default JourneyResults;
+
+function buildOptionLabels(options: JourneyTrip[]) {
+  if (options.length === 0) return [];
+
+  const minDuration = Math.min(
+    ...options.map((option) => option.realisticDurationMinutes ?? option.plannedDurationMinutes ?? Number.MAX_SAFE_INTEGER),
+  );
+  const minTransfers = Math.min(...options.map((option) => option.transfers ?? Number.MAX_SAFE_INTEGER));
+  const minWalking = Math.min(...options.map((option) => option.walkingDurationMinutes ?? Number.MAX_SAFE_INTEGER));
+
+  return options.map((option, index) => {
+    if (index === 0) return "Snabbast";
+    if ((option.transfers ?? Number.MAX_SAFE_INTEGER) === minTransfers) return "Minst byten";
+    if ((option.walkingDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minWalking) return "Mindre gång";
+    if ((option.realisticDurationMinutes ?? option.plannedDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minDuration) return "Snabb";
+    return "Alternativ";
+  });
+}
