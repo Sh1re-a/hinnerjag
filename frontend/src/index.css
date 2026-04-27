@@ -26,5 +26,10 @@ body,
 
 body {
   min-width: 320px;
-  background: #06080c;
+  background: radial-gradient(600px 400px at 50% 18%, rgba(14,164,233,0.06), transparent 30%), #06080c;
+}
+
+/* Landing tokens */
+:root {
+  --landing-glow: radial-gradient(600px 400px at 50% 18%, rgba(14,164,233,0.06), transparent 30%);
 }
