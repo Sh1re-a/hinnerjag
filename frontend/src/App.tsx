@@ -10,24 +10,22 @@ import JourneyPage from "./pages/JourneyPage";
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
 import { useNearbyBoard } from "./hooks/useNearbyBoard";
 
+type AddressState = { lat: number; lng: number; label: string };
+
 function App() {
   const [showLocationDialog, setShowLocationDialog] = useState(true);
-   const [manualPosition, setManualPosition] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  const [manualPosition, setManualPosition] = useState<AddressState | null>(null);
   const [currentView, setCurrentView] = useState<"landing" | "journey">("landing");
 
   const { position, isLocating, locationError, requestPosition } =
     useCurrentPosition();
 
-    const activePosition = manualPosition
+  const activePosition = manualPosition
     ? { lat: manualPosition.lat, lng: manualPosition.lng }
     : position;
-
-
-    
   const nearbyBoardQuery = useNearbyBoard(activePosition);
 
   useEffect(() => {
-    // Debug: log nearby board response for troubleshooting missing metro
     console.debug("nearbyBoard: position=", activePosition, "data=", nearbyBoardQuery.data);
   }, [activePosition, nearbyBoardQuery.data]);
 
@@ -49,7 +47,11 @@ function App() {
       ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
       : "Din position";
 
-  // origin was previously used by the modal; kept via JourneyPage props instead
+  const journeyOrigin = manualPosition
+    ? manualPosition
+    : position
+      ? { lat: position.lat, lng: position.lng, label: addressLabel }
+      : null;
 
   const handleAllowLocation = async () => {
     try {
@@ -120,12 +122,20 @@ function App() {
             </>
           ) : (
             <div className="w-full">
-              <JourneyPage onBack={() => setCurrentView("landing")} />
+              <JourneyPage
+                onBack={() => setCurrentView("landing")}
+                originPreset={journeyOrigin}
+                onSelectOrigin={(nextOrigin) => setManualPosition(nextOrigin)}
+                onRequestCurrentPosition={requestPosition}
+                isLocating={isLocating}
+              />
             </div>
           )}
         </div>
 
-        <BottomJourneyCta onClick={() => setCurrentView("journey")} />
+        {currentView === "landing" && (
+          <BottomJourneyCta onClick={() => setCurrentView("journey")} />
+        )}
       </div>
     </main>
   );
