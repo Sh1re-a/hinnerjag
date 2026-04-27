@@ -1,5 +1,5 @@
 import React from "react";
-import { outerCard, innerCard } from "./uiTokens";
+import { outerCard } from "./uiTokens";
 
 type OuterProps = {
   children: React.ReactNode;
@@ -7,9 +7,5 @@ type OuterProps = {
 };
 
 export function OuterCard({ children, innerClassName = "" }: OuterProps) {
-  return (
-    <section className={outerCard}>
-      <div className={`${innerCard} ${innerClassName}`}>{children}</div>
-    </section>
-  );
+  return <section className={`${outerCard} ${innerClassName}`}>{children}</section>;
 }
