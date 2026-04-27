@@ -1,20 +1,27 @@
+import { ArrowRight } from "lucide-react";
 type BottomJourneyCtaProps = {
   onClick?: () => void;
+  label?: string;
 };
 
-export function BottomJourneyCta({ onClick }: BottomJourneyCtaProps) {
+import { ctaClass, iconSize } from "./uiTokens";
+
+export function BottomJourneyCta({
+  onClick,
+  label = "Hinner du med din resa?",
+}: BottomJourneyCtaProps) {
   return (
-    <div className="fixed inset-x-4 bottom-4 z-20 mx-auto max-w-3xl sm:inset-x-6">
+    <div className="fixed inset-x-4 z-20 mx-auto max-w-3xl sm:inset-x-6" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 16px)' }}>
       <button
-        className="flex w-full items-center justify-between rounded-3xl bg-emerald-500 px-5 py-4 text-left text-base font-semibold text-white shadow-[0_16px_36px_rgba(34,197,94,0.30)] transition hover:bg-emerald-400 sm:text-lg"
+        className={`${ctaClass} transition hover:bg-emerald-400 sm:text-lg`}
         onClick={onClick}
         type="button"
       >
         <span className="flex items-center gap-3">
-          <span className="text-xl">➜</span>
-          Hinner du med din resa?
+          <ArrowRight className={iconSize} />
+          {label}
         </span>
-        <span className="text-xl">→</span>
+        <ArrowRight className={iconSize} />
       </button>
     </div>
   );
