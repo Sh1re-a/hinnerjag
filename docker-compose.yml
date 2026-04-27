@@ -5,13 +5,13 @@ services:
       context: ./backend
     container_name: hinnerjag-backend
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
 
   frontend:
     build:
       context: ./frontend
     container_name: hinnerjag-frontend
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
     depends_on:
       - backend
