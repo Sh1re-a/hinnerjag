@@ -2,6 +2,7 @@ import { ChevronDown, Footprints, TrainFront } from "lucide-react";
 import { useState } from "react";
 import type { NearbySite, Reachability } from "../hooks/useNearbyBoard";
 import { getStatusBadgeTone, getStatusTone } from "./boardUi";
+import { sectionLabel } from "./uiTokens";
 
 type MetroBoardProps = {
   metro: NearbySite | null;
@@ -114,29 +115,27 @@ export function MetroBoard({
     nextCatchableDeparture?.reachability?.minutesUntilDeparture ?? null;
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#171c22]/95 p-2.5 text-white shadow-[0_18px_48px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-3">
+    <section className="overflow-hidden rounded-lg bg-[#171c22]/95 p-2 text-white shadow-sm sm:p-2.5">
       <div className="mb-2 px-0.5">
         <div className="inline-flex items-center gap-2 text-sky-400">
-          <TrainFront size={16} />
-          <p className="text-[12px] font-semibold uppercase tracking-[0.12em]">
-            TUNNELBANA
-          </p>
+          <TrainFront size={15} />
+          <p className={sectionLabel}>Närmaste tunnelbana</p>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95">
-        <div className="flex items-start justify-between gap-2.5 border-b border-white/8 px-2.5 py-2.5">
+      <div className="overflow-hidden rounded-md border border-white/8 bg-[#151c27]/95">
+        <div className="flex items-start justify-between gap-3 border-b border-white/8 px-3 py-2.5">
           <div className="flex min-w-0 items-start gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-              <TrainFront size={16} />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-600 text-white">
+              <TrainFront size={14} />
             </div>
 
             <div className="min-w-0">
-              <p className="truncate text-[16px] font-semibold leading-tight text-white">
+              <p className="truncate text-[15px] font-semibold leading-tight text-white">
                 {metro?.siteName ?? "-"}
               </p>
               {metro && (
-                <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-white/72">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/72">
                   <span className="inline-flex items-center gap-1.5">
                     <Footprints size={10} />
                     {getGoHint(metro)}
@@ -181,7 +180,7 @@ export function MetroBoard({
           <div
             className={`overflow-hidden transition-all duration-300 ${isOpen ? "max-h-225 opacity-100" : "max-h-0 opacity-0"}`}
           >
-            <div className="divide-y divide-white/6 px-2.5">
+            <div className="divide-y divide-white/6 px-3">
               {visibleDepartures.map((departure, index) => {
                 const actionLabel = getActionLabel(departure.reachability);
                 const displayLabel = getDisplayLabel(departure);
@@ -193,21 +192,21 @@ export function MetroBoard({
                 return (
                   <div
                     key={`${departure.line}-${departure.destination}-${index}`}
-                    className="flex items-center justify-between gap-2.5 py-1.5"
+                    className="flex items-center justify-between gap-3 py-2.5"
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-600 text-[12px] font-semibold text-white">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-600 text-[11px] font-semibold text-white">
                         {departure.line ?? "-"}
                       </div>
 
-                      <p className="truncate text-[15px] font-medium text-white">
+                      <p className="truncate text-[14px] font-medium text-white">
                         {departure.destination ?? "Okänd destination"}
                       </p>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1.5">
                       <p
-                        className={`font-mono text-[15px] font-semibold leading-none ${tone}`}
+                        className={`font-mono text-[14px] font-semibold leading-none ${tone}`}
                       >
                         {displayLabel}
                       </p>
@@ -227,29 +226,29 @@ export function MetroBoard({
               })}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-white/8 px-2.5 py-1.5">
-              <p className="min-w-0 text-sm text-emerald-300">
-                Tips:{" "}
-                {nextCatchableMinutes === null
-                  ? "Du missar de närmaste avgångarna"
-                  : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
-              </p>
+            <div className="flex items-center justify-between gap-3 border-t border-white/8 px-3 py-2.5">
+                <p className="min-w-0 text-[13px] text-emerald-300">
+                  Tips:{" "}
+                  {nextCatchableMinutes === null
+                    ? "Du missar de närmaste avgångarna"
+                    : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
+                </p>
 
-              {remainingDepartures > 0 && (
-                <button
-                  onClick={() => setIsExpanded((prev) => !prev)}
-                  className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-white/55 transition hover:text-white"
-                  type="button"
-                >
-                  {isExpanded
-                    ? "Visa mindre"
-                    : `+${remainingDepartures} fler`}
-                  <ChevronDown
-                    className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-0"}`}
-                    size={13}
-                  />
-                </button>
-              )}
+                {remainingDepartures > 0 && (
+                  <button
+                    onClick={() => setIsExpanded((prev) => !prev)}
+                        className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-white/55 transition hover:text-white"
+                        type="button"
+                      >
+                    {isExpanded
+                      ? "Visa mindre"
+                      : `+${remainingDepartures} fler`}
+                    <ChevronDown
+                      className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-0"}`}
+                      size={13}
+                    />
+                  </button>
+                )}
             </div>
           </div>
         )}
