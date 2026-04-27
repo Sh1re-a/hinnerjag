@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { searchAddress } from "../hooks/useAddressSearch";
 import { LocateFixed } from "lucide-react";
+import { inputClass, sectionLabel } from "./uiTokens";
 
 type LandingHeaderProps = {
   addressLabel: string;
@@ -31,22 +32,24 @@ export function LandingHeader({
 
   return (
     <>
-      <nav className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/60">
+      <nav className="flex items-start justify-between gap-3">
+        <p className={`${sectionLabel} pt-3`}>
           HINNER JAG
         </p>
-        <input
-          className="input input-bordered bg-white/5 text-white placeholder:text-white/35 px-3 py-1.5 text-[11px] font-medium"
-          placeholder="Search address…"
-          value={query}
-          onChange={(e) => handleSearch(e.target.value)}
-        />
+        <div className="flex-1">
+          <input
+            className={inputClass}
+            placeholder="Sök adress eller plats..."
+            value={query}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+        </div>
       </nav>
       {isLoading && (
-        <div className="text-xs text-white/60 mt-1">Searching…</div>
+        <div className="mt-1 text-xs text-white/60">Söker…</div>
       )}
       {results.length > 0 && (
-        <ul className="menu mt-1 rounded-box border border-white/10 bg-white/5 p-2">
+        <ul className="menu mt-2 rounded-2xl border border-white/10 bg-[#1a2230] p-2">
           {results.map((r) => (
             <li key={r.label}>
               <button
