@@ -49,14 +49,33 @@ public class JourneyStopService {
         return cleanStopName(stop.name());
     }
 
-    private String extractPlatform(Map<String, String> properties) {
+    private String extractPlatform(Map<String, Object> properties) {
         if (properties == null) {
             return null;
         }
 
-        String platform = properties.get("platformName");
+        Object p = properties.get("platformName");
+        String platform = null;
+        if (p instanceof String) {
+            platform = (String) p;
+        } else if (p instanceof java.util.List) {
+            java.util.List<?> l = (java.util.List<?>) p;
+            if (!l.isEmpty()) platform = l.get(0) == null ? null : l.get(0).toString();
+        } else if (p != null && p.getClass().isArray()) {
+            Object[] arr = (Object[]) p;
+            if (arr.length > 0) platform = arr[0] == null ? null : arr[0].toString();
+        }
+
         if (isBlank(platform)) {
-            platform = properties.get("platform");
+            Object p2 = properties.get("platform");
+            if (p2 instanceof String) platform = (String) p2;
+            else if (p2 instanceof java.util.List) {
+                java.util.List<?> l = (java.util.List<?>) p2;
+                if (!l.isEmpty()) platform = l.get(0) == null ? null : l.get(0).toString();
+            } else if (p2 != null && p2.getClass().isArray()) {
+                Object[] arr = (Object[]) p2;
+                if (arr.length > 0) platform = arr[0] == null ? null : arr[0].toString();
+            }
         }
 
         return platform;
