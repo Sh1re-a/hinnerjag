@@ -6,7 +6,8 @@ public record TransportDepartureDto(
         TransportLineDto line,
         String destination,
         String direction,
-        String display
+        String display,
+        @JsonProperty("stop_area") TransportStopAreaDto stopArea
 
 ) {
 }
