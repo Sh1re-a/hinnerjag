@@ -1,13 +1,6 @@
 import { sectionLabel } from "./uiTokens";
 
-type LandingHeaderProps = {
-  addressLabel?: string;
-  title?: string;
-  subtitle?: string;
-  onSelectAddress?: (lat: number, lng: number, label: string) => void;
-};
-
-export function LandingHeader(_: LandingHeaderProps) {
+export function LandingHeader() {
   return (
     <div className="px-1 pt-1">
       <div className="flex items-start justify-between gap-3">
