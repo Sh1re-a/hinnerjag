@@ -95,9 +95,9 @@ public class PlanningFieldExtractor {
             return null;
         }
 
-        String platform = place.properties().get("platformName");
+        String platform = propertyAsString(place.properties(), "platformName");
         if (isBlank(platform)) {
-            platform = place.properties().get("platform");
+            platform = propertyAsString(place.properties(), "platform");
         }
 
         return platform;
@@ -108,7 +108,27 @@ public class PlanningFieldExtractor {
             return null;
         }
 
-        return place.properties().get("occupancy");
+        return propertyAsString(place.properties(), "occupancy");
+    }
+
+    private String propertyAsString(java.util.Map<String, Object> props, String key) {
+        if (props == null) return null;
+
+        Object v = props.get(key);
+        if (v == null) return null;
+        if (v instanceof String) return (String) v;
+        if (v instanceof java.util.List) {
+            java.util.List<?> l = (java.util.List<?>) v;
+            if (!l.isEmpty()) return l.get(0) == null ? null : l.get(0).toString();
+            return null;
+        }
+        if (v.getClass().isArray()) {
+            Object[] arr = (Object[]) v;
+            if (arr.length > 0) return arr[0] == null ? null : arr[0].toString();
+            return null;
+        }
+
+        return v.toString();
     }
 
     public List<String> extractAlerts(LegDto leg) {
