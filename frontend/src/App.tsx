@@ -9,6 +9,7 @@ import { MetroBoard } from "./components/MetroBoard";
 import JourneyPage from "./pages/JourneyPage";
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
 import { useNearbyBoard } from "./hooks/useNearbyBoard";
+import { heroTitle, sectionLabel, smallText } from "./components/uiTokens";
 
 type AddressState = { lat: number; lng: number; label: string };
 
@@ -46,6 +47,11 @@ function App() {
     : position
       ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
       : "Din position";
+  const locationTitle = manualPosition
+    ? manualPosition.label.split(",")[0].trim()
+    : position
+      ? "Din position"
+      : "Ingen plats vald";
 
   const journeyOrigin = manualPosition
     ? manualPosition
@@ -79,7 +85,7 @@ function App() {
           onSkip={() => setShowLocationDialog(false)}
         />
 
-        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:max-w-3xl sm:px-6">
+        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[414px] flex-col px-3 pb-22 pt-3 sm:max-w-3xl sm:px-6">
           <LandingHeader
             addressLabel={addressLabel}
             onSelectAddress={(lat, lng, label) => setManualPosition({ lat, lng, label })}
@@ -99,6 +105,16 @@ function App() {
                 </button>
               )}
 
+              <section className="mt-2.5">
+                <div className={sectionLabel}>Din plats</div>
+                <h1 className={heroTitle}>{locationTitle}</h1>
+                <p className={`mt-1.5 max-w-md ${smallText}`}>
+                  {activePosition
+                    ? "Uppdaterad just nu. Se om du hinner tunnelbanan eller bussen innan du går."
+                    : "Välj plats för att få en tydlig bild av vad du hinner just nu."}
+                </p>
+              </section>
+
               <DecisionCard
                 platformMinutes={perrongMinutes}
                 platformWalkMinutes={platformWalkMinutes}
@@ -106,7 +122,7 @@ function App() {
                 busWalkMinutes={busWalkMinutes}
               />
 
-              <section className="mt-2.5 grid gap-2.5 xl:grid-cols-[1.06fr,0.94fr] xl:items-start">
+              <section className="mt-2 grid gap-2 xl:grid-cols-[1.06fr,0.94fr] xl:items-start">
                 <MetroBoard
                   metro={metro}
                   isLoading={nearbyBoardQuery.isLoading}
