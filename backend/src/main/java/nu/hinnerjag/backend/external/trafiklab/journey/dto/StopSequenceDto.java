@@ -6,7 +6,7 @@ public record StopSequenceDto(
         String name,
         String arrivalTimeEstimated,
         String departureTimeEstimated,
-        Map<String, String> properties,
+        Map<String, Object> properties,
         ParentPlaceDto parent
 ) {
 }
