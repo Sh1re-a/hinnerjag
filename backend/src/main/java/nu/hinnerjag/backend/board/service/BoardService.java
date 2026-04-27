@@ -28,11 +28,9 @@ public class BoardService {
         private static final int MIN_BUS_DEPARTURES = 4;
 
     private static final int MAX_BUS_STOPS = 3;
-    private static final double BUS_RADIUS_METERS = 500.0;
-        // Increased slightly to include nearby stations that are a bit beyond 1.2km
-        // (e.g. to ensure Stadshagen is detected for addresses like Lustgårdsgatan 19)
+        private static final double BUS_RADIUS_METERS = 500.0;
         private static final double METRO_RADIUS_METERS = 1500.0;
-    private static final int METRO_CANDIDATE_LIMIT = 4;
+        private static final int METRO_CANDIDATE_LIMIT = 12;
     private static final int BUS_CANDIDATE_LIMIT = 6;
     private static final Set<String> METRO_LINES = Set.of("10", "11", "13", "14", "17", "18", "19");
 
@@ -40,16 +38,16 @@ public class BoardService {
     private final BoardDistanceService boardDistanceService;
     private final BoardAccessService boardAccessService;
     private final BoardDepartureService boardDepartureService;
-    private final MetroStationResolver metroStationResolver;
-    private final BoardCandidateService boardCandidateService;
+        private final MetroStationResolver metroStationResolver;
+        private final BoardCandidateService boardCandidateService;
 
     public BoardService(
             TrafiklabTransportClient trafiklabTransportClient,
             BoardDistanceService boardDistanceService,
             BoardAccessService boardAccessService,
             BoardDepartureService boardDepartureService,
-            MetroStationResolver metroStationResolver,
-            BoardCandidateService boardCandidateService
+                        MetroStationResolver metroStationResolver,
+                        BoardCandidateService boardCandidateService
     ) {
         this.trafiklabTransportClient = trafiklabTransportClient;
         this.boardDistanceService = boardDistanceService;
@@ -96,90 +94,48 @@ public class BoardService {
         NearbyBoardSiteResponse nearestMetro = findNearestMetro(metroCandidates, metroStationIndex);
         List<NearbyBoardSiteResponse> nearbyBusStops = findNearbyBusStops(busCandidates, nearestMetro);
 
-        // If we didn't find a metro among the dedicated metro candidates, perform
-        // a last‑resort check among the bus candidates to avoid missing stations
-        // that for some reason were classified differently by the sites API.
-        if (nearestMetro == null) {
-            for (SiteWithDistance candidate : busCandidates) {
-                String stationName = metroStationResolver.resolveMetroStationName(
-                        candidate.site(),
-                        metroStationIndex
-                );
+        return new NearbyBoardResponse(userLat, userLng, nearestMetro, nearbyBusStops);
+    }
 
-                BoardAccessResponse access = boardAccessService.createMetroAccess(
-                        candidate.distanceMeters(),
-                        stationName
-                );
+        private NearbyBoardSiteResponse findNearestMetro(
+                        List<SiteWithDistance> candidates,
+                        Map<Integer, String> metroStationIndex
+        ) {
+                        for (SiteWithDistance candidate : candidates) {
+                                // Prefer station name from departures' stop_area when available (cheap: uses cached client)
+                                String stationName = null;
 
-                List<BoardDepartureResponse> metroDepartures = findPreparedDepartures(
-                        candidate.site().siteId(),
-                        access,
-                        METRO_TRANSPORT_MODE,
-                        this::isMetroDeparture,
-                        MIN_METRO_DEPARTURES
-                );
-
-                if (!metroDepartures.isEmpty()) {
-                    nearestMetro = new NearbyBoardSiteResponse(
-                            candidate.site().siteId(),
-                            stationName,
-                            boardDistanceService.roundDistance(candidate.distanceMeters()),
-                            access,
-                            metroDepartures
-                    );
-
-                    // Remove this site from bus results if present
-                    int foundId = nearestMetro.siteId();
-                    nearbyBusStops = nearbyBusStops.stream()
-                            .filter(b -> !b.siteId().equals(foundId))
-                            .toList();
-
-                    break;
-                }
-            }
-        }
-
-                // Final fallback: if still no metro found, expand the search radius
-                // (but only check a limited number of nearest sites) to avoid missing
-                // stations due to classification/metadata inconsistencies.
-                if (nearestMetro == null) {
-                        // Collect already checked ids to avoid duplicate work
-                        java.util.Set<Integer> checked = new java.util.HashSet<>();
-                        for (SiteWithDistance s : metroCandidates) {
-                                if (s != null && s.site() != null && s.site().siteId() != null) {
-                                        checked.add(s.site().siteId());
-                                }
-                        }
-                        for (SiteWithDistance s : busCandidates) {
-                                if (s != null && s.site() != null && s.site().siteId() != null) {
-                                        checked.add(s.site().siteId());
-                                }
-                        }
-
-                        double expandedRadius = METRO_RADIUS_METERS * 2;
-                        int expandedLimit = Math.max(METRO_CANDIDATE_LIMIT * 3, METRO_CANDIDATE_LIMIT);
-
-                        List<SiteWithDistance> widerCandidates = boardCandidateService.buildCandidates(
-                                        sites,
-                                        userLat,
-                                        userLng,
-                                        expandedRadius,
-                                        expandedLimit
-                        );
-
-                        for (SiteWithDistance candidate : widerCandidates) {
-                                if (candidate == null || candidate.site() == null || candidate.site().siteId() == null) {
-                                        continue;
-                                }
-
-                                if (checked.contains(candidate.site().siteId())) {
-                                        continue;
-                                }
-
-                                String stationName = metroStationResolver.resolveMetroStationName(
-                                                candidate.site(),
-                                                metroStationIndex
+                                TransportDeparturesResponse rawDepartures = trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
+                                                candidate.site().siteId(),
+                                                METRO_TRANSPORT_MODE,
+                                                NEARBY_FORECAST_MINUTES
                                 );
+
+                                if (rawDepartures != null && rawDepartures.departures() != null) {
+                                        for (var dep : rawDepartures.departures()) {
+                                                if (dep == null) continue;
+
+                                                try {
+                                                        var stopArea = dep.stopArea();
+                                                        if (stopArea != null && "METROSTN".equalsIgnoreCase(stopArea.type())) {
+                                                                var name = stopArea.name();
+                                                                if (name != null && !name.isBlank()) {
+                                                                        stationName = name;
+                                                                        break;
+                                                                }
+                                                        }
+                                                } catch (NoSuchMethodError | UnsupportedOperationException ignored) {
+                                                        // Defensive: if DTO doesn't expose stopArea, fall back to resolver
+                                                }
+                                        }
+                                }
+
+                                if (stationName == null) {
+                                        stationName = metroStationResolver.resolveMetroStationName(
+                                                        candidate.site(),
+                                                        metroStationIndex
+                                        );
+                                }
 
                                 BoardAccessResponse access = boardAccessService.createMetroAccess(
                                                 candidate.distanceMeters(),
@@ -195,68 +151,18 @@ public class BoardService {
                                 );
 
                                 if (!metroDepartures.isEmpty()) {
-                                        nearestMetro = new NearbyBoardSiteResponse(
+                                        return new NearbyBoardSiteResponse(
                                                         candidate.site().siteId(),
                                                         stationName,
                                                         boardDistanceService.roundDistance(candidate.distanceMeters()),
                                                         access,
                                                         metroDepartures
                                         );
-
-                                        int foundId = nearestMetro.siteId();
-                                        nearbyBusStops = nearbyBusStops.stream()
-                                                        .filter(b -> !b.siteId().equals(foundId))
-                                                        .toList();
-
-                                        break;
                                 }
                         }
-                }
 
-        return new NearbyBoardResponse(
-                userLat,
-                userLng,
-                nearestMetro,
-                nearbyBusStops
-        );
-    }
-
-    private NearbyBoardSiteResponse findNearestMetro(
-            List<SiteWithDistance> candidates,
-            Map<Integer, String> metroStationIndex
-    ) {
-        for (SiteWithDistance candidate : candidates) {
-            String stationName = metroStationResolver.resolveMetroStationName(
-                    candidate.site(),
-                    metroStationIndex
-            );
-
-            BoardAccessResponse access = boardAccessService.createMetroAccess(
-                    candidate.distanceMeters(),
-                    stationName
-            );
-
-            List<BoardDepartureResponse> metroDepartures = findPreparedDepartures(
-                    candidate.site().siteId(),
-                    access,
-                    METRO_TRANSPORT_MODE,
-                    this::isMetroDeparture,
-                    MIN_METRO_DEPARTURES
-            );
-
-            if (!metroDepartures.isEmpty()) {
-                return new NearbyBoardSiteResponse(
-                        candidate.site().siteId(),
-                        stationName,
-                        boardDistanceService.roundDistance(candidate.distanceMeters()),
-                        access,
-                        metroDepartures
-                );
-            }
+                        return null;
         }
-
-        return null;
-    }
 
     private List<NearbyBoardSiteResponse> findNearbyBusStops(
             List<SiteWithDistance> candidates,
@@ -332,8 +238,6 @@ public class BoardService {
                         return best;
                 }
 
-                // Fallback: try fetching departures without a transport filter (null) to avoid
-                // missing matches when the API's transport parameter behaves unexpectedly.
                 if (transportMode != null) {
                         List<BoardDepartureResponse> fallback = loadPreparedDepartures(
                                         siteId,
