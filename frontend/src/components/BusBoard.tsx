@@ -2,6 +2,7 @@ import { BusFront, ChevronDown, Footprints } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { NearbySite, Reachability } from "../hooks/useNearbyBoard";
 import { getStatusBadgeTone, getStatusTone } from "./boardUi";
+import { sectionLabel } from "./uiTokens";
 
 type BusBoardProps = {
   busStops: NearbySite[];
@@ -134,18 +135,16 @@ export function BusBoard({
   };
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#171c22]/95 p-2.5 text-white shadow-[0_18px_48px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-3">
+    <section className="overflow-hidden rounded-lg bg-[#171c22]/95 p-2 text-white shadow-sm sm:p-2.5">
       <div className="mb-2 px-0.5">
         <div className="inline-flex items-center gap-2 text-sky-400">
-          <BusFront size={16} />
-          <p className="text-[12px] font-semibold uppercase tracking-[0.12em]">
-            BUSS NÄRA DIG
-          </p>
+          <BusFront size={15} />
+          <p className={sectionLabel}>Buss nära dig</p>
         </div>
       </div>
 
       {isLoading && (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95">
+        <div className="overflow-hidden rounded-md border border-white/8 bg-[#151c27]/95">
           <p className="px-3 py-4 text-sm text-white/65">Hämtar bussar...</p>
         </div>
       )}
@@ -157,7 +156,7 @@ export function BusBoard({
       )}
 
       {!isLoading && !errorMessage && busStops.length === 0 && (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95">
+        <div className="overflow-hidden rounded-md border border-white/8 bg-[#151c27]/95">
           <p className="px-3 py-4 text-sm text-white/65">
             Inga busshållplatser hittades.
           </p>
@@ -188,19 +187,19 @@ export function BusBoard({
             return (
               <div
                 key={stop.siteId}
-                className="overflow-hidden rounded-2xl border border-white/10 bg-[#151c27]/95"
+                className="overflow-hidden rounded-md border border-white/8 bg-[#151c27]/95"
               >
-                <div className="flex min-h-18 items-start justify-between gap-2.5 border-b border-white/8 px-2.5 py-2.5">
+                <div className="flex min-h-16 items-start justify-between gap-3 border-b border-white/8 px-3 py-2.5">
                   <div className="flex min-w-0 items-start gap-2.5">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-600 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-                      <BusFront size={16} />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sky-600 text-white">
+                      <BusFront size={14} />
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate text-[16px] font-semibold leading-tight text-white">
+                      <p className="truncate text-[15px] font-semibold leading-tight text-white">
                         {stop.siteName}
                       </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-white/72">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/72">
                         <span className="inline-flex items-center gap-1.5">
                           <Footprints size={10} />
                           {getGoHint(stop)}
@@ -225,7 +224,7 @@ export function BusBoard({
                 <div
                   className={`overflow-hidden transition-all duration-300 ${isStopOpen ? "max-h-225 opacity-100" : "max-h-0 opacity-0"}`}
                 >
-                  <div className="divide-y divide-white/6 px-2.5">
+                  <div className="divide-y divide-white/6 px-3">
                     {stopDepartures.map((departure, index) => {
                       const actionLabel = getActionLabel(departure.reachability);
                       const displayLabel = getDisplayLabel(departure);
@@ -237,21 +236,21 @@ export function BusBoard({
                       return (
                         <div
                           key={`${stop.siteId}-${departure.line}-${index}`}
-                          className="flex items-center justify-between gap-2.5 py-1.5"
+                          className="flex items-center justify-between gap-3 py-2.5"
                         >
                           <div className="flex min-w-0 items-center gap-2">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-500 text-[12px] font-semibold text-white">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-500 text-[11px] font-semibold text-white">
                               {departure.line ?? "-"}
                             </div>
 
-                            <p className="truncate text-[15px] font-medium text-white">
+                            <p className="truncate text-[14px] font-medium text-white">
                               {departure.destination ?? "Okänd destination"}
                             </p>
                           </div>
 
                           <div className="flex shrink-0 items-center gap-1.5">
                             <p
-                              className={`font-mono text-[15px] font-semibold leading-none ${tone}`}
+                              className={`font-mono text-[14px] font-semibold leading-none ${tone}`}
                             >
                               {displayLabel}
                             </p>
@@ -271,27 +270,27 @@ export function BusBoard({
                     })}
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 border-t border-white/8 px-2.5 py-1.5">
-                    <p className="min-w-0 text-sm text-emerald-300">
-                      Tips:{" "}
-                      {nextCatchableMinutes === null
-                        ? "Du missar de närmaste avgångarna"
-                        : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
-                    </p>
+                  <div className="flex items-center justify-between gap-3 border-t border-white/8 px-3 py-2.5">
+                      <p className="min-w-0 text-[13px] text-emerald-300">
+                        Tips:{" "}
+                        {nextCatchableMinutes === null
+                          ? "Du missar de närmaste avgångarna"
+                          : `Gå nu för att hinna nästa om ${nextCatchableMinutes <= 0 ? "Nu" : `${nextCatchableMinutes} min`}`}
+                      </p>
 
-                    {remainingDepartures > 0 && (
-                      <button
-                        onClick={() => toggleShowMore(stop.siteId)}
-                        className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-white/55 transition hover:text-white"
-                        type="button"
-                      >
-                        {isExpanded ? "Visa mindre" : `+${remainingDepartures} fler`}
-                        <ChevronDown
-                          className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-0"}`}
-                          size={13}
-                        />
-                      </button>
-                    )}
+                      {remainingDepartures > 0 && (
+                        <button
+                          onClick={() => toggleShowMore(stop.siteId)}
+                          className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-white/55 transition hover:text-white"
+                          type="button"
+                        >
+                          {isExpanded ? "Visa mindre" : `+${remainingDepartures} fler`}
+                          <ChevronDown
+                            className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-0"}`}
+                            size={13}
+                          />
+                        </button>
+                      )}
                   </div>
                 </div>
               </div>
