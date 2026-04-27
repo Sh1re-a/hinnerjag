@@ -13,7 +13,18 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
     const text = await response.text();
+
+    if (contentType.includes("application/json")) {
+      try {
+        const parsed = JSON.parse(text) as { message?: string; error?: string };
+        throw new Error(parsed.message || parsed.error || "Något gick fel.");
+      } catch {
+        throw new Error("Något gick fel. Försök igen.");
+      }
+    }
+
     throw new Error(text || "Request failed");
   }
 
