@@ -7,6 +7,7 @@ import { JourneyDetail } from "../components/JourneyDetail";
 import { ArrowLeft, LocateFixed, Search } from "lucide-react";
 import JourneySummaryCard from "../components/JourneySummaryCard";
 import { OuterCard } from "../components/CardBase";
+import { getJourneyHeader } from "../lib/journeyUi";
 import {
   ctaClass,
   ghostButton,
@@ -43,6 +44,7 @@ export function JourneyPage({
   const [destination, setDestination] = useState<Address | null>(null);
   const [destQuery, setDestQuery] = useState("");
   const [destResults, setDestResults] = useState<Address[]>([]);
+  const [showPlanner, setShowPlanner] = useState(true);
 
   const plan = useJourneyPlan();
   const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
@@ -55,11 +57,21 @@ export function JourneyPage({
   }, [originPreset, manualOriginMode]);
 
   const canSubmit = Boolean(origin && destination && !plan.isPending);
+  const originDisplayLabel = useMemo(() => {
+    if (!origin?.label) return "Ingen position vald";
+    return /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(origin.label)
+      ? "Din plats"
+      : origin.label;
+  }, [origin?.label]);
   const resultTitle = useMemo(() => {
     if (destination?.label) return destination.label;
     if (destQuery) return destQuery;
     return "Din resa";
   }, [destination?.label, destQuery]);
+  const journeyHeader = useMemo(() => {
+    if (!plan.data) return null;
+    return getJourneyHeader(plan.data, origin?.label, resultTitle);
+  }, [origin?.label, plan.data, resultTitle]);
 
   const handleOriginSearch = async (q: string) => {
     setOriginQuery(q);
@@ -101,6 +113,7 @@ export function JourneyPage({
     };
 
     setSelectedSegment(null);
+    setShowPlanner(false);
     plan.mutate(req);
   };
 
@@ -128,13 +141,13 @@ export function JourneyPage({
   };
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-14 pt-4 text-white sm:max-w-3xl">
-      <header className="mb-5">
+    <div className="mx-auto max-w-md px-1 pb-12 pt-2 text-white sm:max-w-3xl">
+      <header className="mb-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className={sectionLabel}>Resplanerare</p>
             <h2 className={heroTitle}>Planera din resa</h2>
-            <p className="mt-2 max-w-sm text-sm text-white/60">Se om du hinner innan du går.</p>
+            <p className="mt-1 max-w-sm text-[13px] text-white/60">Se om du hinner innan du går.</p>
           </div>
 
           {onBack && (
@@ -147,29 +160,42 @@ export function JourneyPage({
       </header>
 
       <OuterCard>
-        <div className="space-y-4">
+        {plan.data && !showPlanner ? (
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className={sectionLabel}>Plan</div>
+              <div className="mt-1 truncate text-[14px] font-medium text-white">
+                {originDisplayLabel} → {resultTitle}
+              </div>
+            </div>
+            <button type="button" className={subtleButton} onClick={() => setShowPlanner(true)}>
+              Ändra resa
+            </button>
+          </div>
+        ) : (
+        <div className="space-y-3">
           <div>
-            <label className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-white/45">Från</label>
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+            <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">Från</label>
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               <div className="space-y-2">
                 {manualOriginMode ? (
                   <div>
                     <div className="relative">
-                      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                      <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
                       <input
                         value={originQuery}
                         onChange={(e) => void handleOriginSearch(e.target.value)}
                         placeholder="Sök adress eller plats..."
-                        className={`${inputClass} pl-11`}
+                        className={`${inputClass} pl-10`}
                       />
                     </div>
 
                     {originResults.length > 0 && (
-                      <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[#1a2230]">
+                      <div className="mt-2 overflow-hidden rounded-md border border-white/8 bg-[#1a2230]">
                         {originResults.map((result) => (
                           <button
                             key={result.label}
-                            className="block w-full border-b border-white/6 px-4 py-3 text-left text-sm text-white/82 transition last:border-b-0 hover:bg-white/5"
+                            className="block w-full border-b border-white/6 px-3 py-2.5 text-left text-[13px] text-white/82 transition last:border-b-0 hover:bg-white/5"
                             onClick={() => {
                               syncOrigin(result);
                               setOriginResults([]);
@@ -184,11 +210,11 @@ export function JourneyPage({
                     )}
                   </div>
                 ) : (
-                  <div className={`${inputClass} flex min-h-14 items-center`}>
-                    <span className="truncate">{origin?.label ?? "Ingen position vald"}</span>
+                  <div className={`${inputClass} flex min-h-11 items-center`}>
+                    <span className="truncate">{originDisplayLabel}</span>
                   </div>
                 )}
-                <div className="text-sm text-white/45">
+                <div className="text-[12px] text-white/45">
                   {origin ? "Utgår från din nuvarande plats" : "Sätt startpunkt manuellt eller via position"}
                 </div>
               </div>
@@ -217,23 +243,23 @@ export function JourneyPage({
           </div>
 
           <div>
-            <label className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-white/45">Till</label>
+            <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">Till</label>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
               <input
                 value={destQuery}
                 onChange={(e) => void handleDestSearch(e.target.value)}
                 placeholder="Sök destination..."
-                className={`${inputClass} pl-11`}
+                className={`${inputClass} pl-10`}
               />
             </div>
 
             {destResults.length > 0 && (
-              <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[#1a2230]">
+              <div className="mt-2 overflow-hidden rounded-md border border-white/8 bg-[#1a2230]">
                 {destResults.map((result) => (
                   <button
                     key={result.label}
-                    className="block w-full border-b border-white/6 px-4 py-3 text-left text-sm text-white/82 transition last:border-b-0 hover:bg-white/5"
+                    className="block w-full border-b border-white/6 px-3 py-2.5 text-left text-[13px] text-white/82 transition last:border-b-0 hover:bg-white/5"
                     onClick={() => {
                       setDestination(result);
                       setDestResults([]);
@@ -248,7 +274,7 @@ export function JourneyPage({
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={handlePlan}
               disabled={!canSubmit}
@@ -269,6 +295,7 @@ export function JourneyPage({
                 setDestResults([]);
                 setManualOriginMode(false);
                 setSelectedSegment(null);
+                setShowPlanner(true);
                 plan.reset();
               }}
               className={ghostButton}
@@ -277,6 +304,7 @@ export function JourneyPage({
             </button>
           </div>
         </div>
+        )}
       </OuterCard>
 
       {plan.isError && (
@@ -286,7 +314,24 @@ export function JourneyPage({
       )}
 
       {plan.data && (
-        <div className="mt-5">
+        <div className="mt-4">
+          {journeyHeader && (
+            <div className="mb-3">
+              <div className={sectionLabel}>Din resa</div>
+              <h3 className={heroTitle}>{journeyHeader.title}</h3>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px] text-white/60">
+                {journeyHeader.meta.map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+                {journeyHeader.realtimeDeltaLabel && (
+                  <span className="rounded-full border border-white/8 bg-white/5 px-2 py-0.5 text-[11px] text-white/72">
+                    {journeyHeader.realtimeDeltaLabel}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <JourneySummaryCard data={plan.data} />
 
           <JourneyResults
