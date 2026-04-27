@@ -1,16 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { searchAddress } from "../hooks/useAddressSearch";
-import { useCurrentPosition } from "../hooks/useCurrentPosition";
 import { useJourneyPlan } from "../hooks/useJourneyPlan";
 import type { JourneyPlanRequest } from "../hooks/useJourneyPlan";
 import { JourneyResults } from "../components/JourneyResults";
 import { JourneyDetail } from "../components/JourneyDetail";
+import { ArrowLeft, LocateFixed, Search } from "lucide-react";
+import JourneySummaryCard from "../components/JourneySummaryCard";
+import { OuterCard } from "../components/CardBase";
+import {
+  ctaClass,
+  ghostButton,
+  heroTitle,
+  iconButton,
+  iconSize,
+  inputClass,
+  sectionLabel,
+  subtleButton,
+} from "../components/uiTokens";
 
 type Address = { label: string; lat: number; lng: number };
 
-export function JourneyPage({ onBack }: { onBack?: () => void }) {
-  const { position, isLocating, requestPosition } = useCurrentPosition();
+type JourneyPageProps = {
+  onBack?: () => void;
+  originPreset?: Address | null;
+  onSelectOrigin?: (origin: Address) => void;
+  onRequestCurrentPosition?: () => Promise<{ lat: number; lng: number }>;
+  isLocating?: boolean;
+};
 
+export function JourneyPage({
+  onBack,
+  originPreset = null,
+  onSelectOrigin,
+  onRequestCurrentPosition,
+  isLocating = false,
+}: JourneyPageProps) {
   const [origin, setOrigin] = useState<Address | null>(null);
   const [manualOriginMode, setManualOriginMode] = useState(false);
   const [originQuery, setOriginQuery] = useState("");
@@ -24,14 +48,18 @@ export function JourneyPage({ onBack }: { onBack?: () => void }) {
   const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
 
   useEffect(() => {
-    if (position && !origin && !manualOriginMode) {
-      setOrigin({
-        label: `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`,
-        lat: position.lat,
-        lng: position.lng,
-      });
+    if (originPreset && !manualOriginMode) {
+      setOrigin(originPreset);
+      setOriginQuery(originPreset.label);
     }
-  }, [position, origin, manualOriginMode]);
+  }, [originPreset, manualOriginMode]);
+
+  const canSubmit = Boolean(origin && destination && !plan.isPending);
+  const resultTitle = useMemo(() => {
+    if (destination?.label) return destination.label;
+    if (destQuery) return destQuery;
+    return "Din resa";
+  }, [destination?.label, destQuery]);
 
   const handleOriginSearch = async (q: string) => {
     setOriginQuery(q);
@@ -62,17 +90,6 @@ export function JourneyPage({ onBack }: { onBack?: () => void }) {
       setDestResults([]);
     }
   };
-
-  const handleUseMyPosition = async () => {
-    try {
-      const p = await requestPosition();
-      setOrigin({ label: `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`, lat: p.lat, lng: p.lng });
-      setManualOriginMode(false);
-    } catch {
-      // ignore: hook surfaces user error
-    }
-  };
-
   const handlePlan = () => {
     if (!origin || !destination) return;
 
@@ -83,161 +100,209 @@ export function JourneyPage({ onBack }: { onBack?: () => void }) {
       destinationLng: destination.lng,
     };
 
+    setSelectedSegment(null);
     plan.mutate(req);
   };
 
+  const syncOrigin = (nextOrigin: Address) => {
+    setOrigin(nextOrigin);
+    setOriginQuery(nextOrigin.label);
+    onSelectOrigin?.(nextOrigin);
+  };
+
+  const handleUseCurrentPosition = async () => {
+    if (!onRequestCurrentPosition) return;
+
+    try {
+      const nextPosition = await onRequestCurrentPosition();
+      const nextOrigin = {
+        label: `${nextPosition.lat.toFixed(5)}, ${nextPosition.lng.toFixed(5)}`,
+        lat: nextPosition.lat,
+        lng: nextPosition.lng,
+      };
+      syncOrigin(nextOrigin);
+      setManualOriginMode(false);
+    } catch {
+      // The location hook already owns user-facing error handling.
+    }
+  };
+
   return (
-    <div className="mx-auto max-w-md p-4 text-white">
-      <header className="mb-4 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="btn btn-ghost btn-sm"
-        >
-          Tillbaka
-        </button>
-        <h2 className="text-lg font-semibold">Planera din resa</h2>
+    <div className="mx-auto max-w-md px-4 pb-14 pt-4 text-white sm:max-w-3xl">
+      <header className="mb-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className={sectionLabel}>Resplanerare</p>
+            <h2 className={heroTitle}>Planera din resa</h2>
+            <p className="mt-2 max-w-sm text-sm text-white/60">Se om du hinner innan du går.</p>
+          </div>
+
+          {onBack && (
+            <button type="button" onClick={onBack} className={ghostButton}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Tillbaka
+            </button>
+          )}
+        </div>
       </header>
 
-      <section className="mb-4">
-        <label className="block text-xs text-white/60 mb-1">Från</label>
-        {manualOriginMode ? (
+      <OuterCard>
+        <div className="space-y-4">
           <div>
-            <input
-              value={originQuery}
-              onChange={(e) => void handleOriginSearch(e.target.value)}
-              placeholder="Sök startadress…"
-              className="input input-bordered w-full bg-white/5 text-white mb-2"
-            />
-            {originResults.length > 0 && (
-              <ul className="menu bg-white/5 p-2 rounded-box mb-2">
-                {originResults.map((r) => (
-                  <li key={r.label}>
-                    <button
-                      className="text-left"
-                      onClick={() => {
-                        setOrigin(r);
-                        setOriginResults([]);
-                        setOriginQuery(r.label);
-                        setManualOriginMode(false);
-                      }}
-                      type="button"
-                    >
-                      {r.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <div className="rounded bg-white/5 p-3">
-                <div className="text-sm text-white/80">{origin?.label ?? "Ingen position vald"}</div>
-                <div className="text-xs text-white/50">{position ? "Automatisk position" : "Välj manuellt"}</div>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-white/45">Från</label>
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+              <div className="space-y-2">
+                {manualOriginMode ? (
+                  <div>
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                      <input
+                        value={originQuery}
+                        onChange={(e) => void handleOriginSearch(e.target.value)}
+                        placeholder="Sök adress eller plats..."
+                        className={`${inputClass} pl-11`}
+                      />
+                    </div>
+
+                    {originResults.length > 0 && (
+                      <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[#1a2230]">
+                        {originResults.map((result) => (
+                          <button
+                            key={result.label}
+                            className="block w-full border-b border-white/6 px-4 py-3 text-left text-sm text-white/82 transition last:border-b-0 hover:bg-white/5"
+                            onClick={() => {
+                              syncOrigin(result);
+                              setOriginResults([]);
+                              setManualOriginMode(false);
+                            }}
+                            type="button"
+                          >
+                            {result.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className={`${inputClass} flex min-h-14 items-center`}>
+                    <span className="truncate">{origin?.label ?? "Ingen position vald"}</span>
+                  </div>
+                )}
+                <div className="text-sm text-white/45">
+                  {origin ? "Utgår från din nuvarande plats" : "Sätt startpunkt manuellt eller via position"}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 sm:flex-col sm:items-stretch">
+                <button
+                  type="button"
+                  onClick={() => setManualOriginMode((current) => !current)}
+                  className={subtleButton}
+                >
+                  {manualOriginMode ? "Klar" : "Ändra"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleUseCurrentPosition();
+                  }}
+                  className={iconButton}
+                  disabled={isLocating}
+                  aria-label="Använd min position"
+                >
+                  <LocateFixed className={iconSize} />
+                </button>
               </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => setManualOriginMode(true)}
-                className="btn btn-ghost btn-sm"
-              >
-                Ändra
-              </button>
-              <button
-                type="button"
-                onClick={handleUseMyPosition}
-                className="btn btn-primary btn-sm"
-                disabled={isLocating}
-              >
-                Använd min position
-              </button>
-            </div>
           </div>
-        )}
-      </section>
 
-      <section className="mb-4">
-        <label className="block text-xs text-white/60 mb-1">Till</label>
-        <input
-          value={destQuery}
-          onChange={(e) => void handleDestSearch(e.target.value)}
-          placeholder="Sök destination…"
-          className="input input-bordered w-full bg-white/5 text-white mb-2"
-        />
+          <div>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-white/45">Till</label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+              <input
+                value={destQuery}
+                onChange={(e) => void handleDestSearch(e.target.value)}
+                placeholder="Sök destination..."
+                className={`${inputClass} pl-11`}
+              />
+            </div>
 
-        {destResults.length > 0 && (
-          <ul className="menu bg-white/5 p-2 rounded-box mb-2">
-            {destResults.map((r) => (
-              <li key={r.label}>
-                <button
-                  className="text-left"
-                  onClick={() => {
-                    setDestination(r);
-                    setDestResults([]);
-                    setDestQuery(r.label);
-                  }}
-                  type="button"
-                >
-                  {r.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+            {destResults.length > 0 && (
+              <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-[#1a2230]">
+                {destResults.map((result) => (
+                  <button
+                    key={result.label}
+                    className="block w-full border-b border-white/6 px-4 py-3 text-left text-sm text-white/82 transition last:border-b-0 hover:bg-white/5"
+                    onClick={() => {
+                      setDestination(result);
+                      setDestResults([]);
+                      setDestQuery(result.label);
+                    }}
+                    type="button"
+                  >
+                    {result.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-      <div className="mb-4 flex gap-2">
-        <button
-          onClick={handlePlan}
-          disabled={!origin || !destination || plan.isPending}
-          className="btn btn-primary flex-1"
-          type="button"
-        >
-          {plan.isPending ? "Planerar…" : "Visa resor"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setOrigin(null);
-            setDestination(null);
-            setOriginQuery("");
-            setDestQuery("");
-          }}
-          className="btn btn-ghost"
-        >
-          Rensa
-        </button>
-      </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePlan}
+              disabled={!canSubmit}
+              className={`${ctaClass} disabled:cursor-not-allowed disabled:opacity-45`}
+              type="button"
+            >
+              {plan.isPending ? "Planerar…" : "Visa resor"}
+            </button>
 
-      {plan.isError && <div className="text-red-400">{(plan.error as Error)?.message ?? "Fel vid planering"}</div>}
+            <button
+              type="button"
+              onClick={() => {
+                setOrigin(originPreset);
+                setDestination(null);
+                setOriginQuery(originPreset?.label ?? "");
+                setDestQuery("");
+                setOriginResults([]);
+                setDestResults([]);
+                setManualOriginMode(false);
+                setSelectedSegment(null);
+                plan.reset();
+              }}
+              className={ghostButton}
+            >
+              Rensa
+            </button>
+          </div>
+        </div>
+      </OuterCard>
+
+      {plan.isError && (
+        <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          {(plan.error as Error)?.message ?? "Fel vid planering"}
+        </div>
+      )}
 
       {plan.data && (
-        <div>
-          <section className="rounded-lg bg-white/5 p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-white/50">Rekommenderad avgång</div>
-                <div className="text-lg font-semibold">{plan.data.recommendedLeaveAt ?? "—"}</div>
-                <div className="text-sm text-white/60">{plan.data.recommendedLeaveInMinutes} minuter</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-white/50">Beräknad tid</div>
-                <div className="text-lg font-semibold">{plan.data.plannedDurationMinutes ?? "—"} min</div>
-              </div>
-            </div>
-          </section>
+        <div className="mt-5">
+          <JourneySummaryCard data={plan.data} />
 
-          <div className="mt-3">
-            <JourneyResults data={plan.data} onSelectSegment={(i) => setSelectedSegment(i)} />
-            {selectedSegment !== null && (
-              <div className="mt-2">
-                <JourneyDetail data={plan.data} segmentIndex={selectedSegment} />
-              </div>
-            )}
-          </div>
+          <JourneyResults
+            data={plan.data}
+            onSelectSegment={(index) => setSelectedSegment(index)}
+            selectedIndex={selectedSegment}
+          />
+
+          {selectedSegment !== null && (
+            <JourneyDetail
+              data={plan.data}
+              segmentIndex={selectedSegment}
+              originLabel={origin?.label}
+              destinationLabel={resultTitle}
+            />
+          )}
         </div>
       )}
     </div>
