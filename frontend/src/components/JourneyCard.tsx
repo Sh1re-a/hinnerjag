@@ -18,32 +18,46 @@ export default function JourneyCard({ data, variant = "option", isSelected, isPr
   const duration = data.realisticDurationMinutes ?? data.plannedDurationMinutes ?? "-";
   const transfers = data.transfers ?? 0;
   const walk = data.walkingDurationMinutes ?? 0;
+  const arrival = route.arrivalTime ?? "—";
+  const leaveLabel =
+    leaveMin == null ? status.label : leaveMin > 0 ? `${leaveMin} min kvar` : leaveMin === 0 ? "Gå nu" : "Skynda";
 
   if (variant === "summary") {
     return (
       <OuterCard>
-        <div className="flex items-start justify-between gap-6">
-          <div className="min-w-0">
-            <div className={metaText}>{route.departureTime ?? "—"} → {route.arrivalTime ?? "—"}</div>
-            <div className="mt-3 text-4xl font-semibold leading-none text-white">{duration} min</div>
-            <div className={`mt-3 ${smallText}`}>Gång {walk} min · {transfers} byten</div>
+        <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-md bg-white/[0.02]">
+          <div className="px-3 py-3">
+            <div className={metaText}>Rekommenderad avgång</div>
+            <div className="mt-2 text-[26px] font-semibold leading-none text-white">{data.recommendedLeaveAt ?? "—"}</div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className={`${badgeBase} ${getStatusBadgeTone(status.key as any)}`}>{leaveLabel}</span>
+            </div>
+            <div className={`mt-2 ${smallText}`}>För att hinna i tid</div>
           </div>
 
-          <div className="shrink-0 text-right">
-            <div className={metaText}>Gå senast</div>
-            <div className="mt-2 text-3xl font-semibold leading-none">{data.recommendedLeaveAt ?? "—"}</div>
-            <div className="mt-3 flex items-center justify-end gap-2">
-              <span className={`${badgeBase} ${getStatusBadgeTone(status.key as any)}`}>{status.label}</span>
+          <div className="border-l border-white/8 px-3 py-3">
+            <div className={metaText}>Framme</div>
+            <div className="mt-2 text-[26px] font-semibold leading-none text-emerald-300">{arrival}</div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[12px] font-semibold text-emerald-300">
+                {status.key === "MISS" ? "Risk att missa" : "Du hinner!"}
+              </span>
             </div>
-            <div className={`mt-3 ${smallText}`}>{leaveMin != null ? `Gå om ${leaveMin} min` : "Ingen rekommendation"}</div>
+            <div className={`mt-2 ${smallText}`}>Inom {duration} min</div>
           </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-white/6 pt-3">
+          <div className={smallText}>{route.departureTime ?? "—"} → {route.arrivalTime ?? "—"}</div>
+          <div className={smallText}>Gång {walk} min</div>
+          <div className={smallText}>{transfers} byten</div>
         </div>
       </OuterCard>
     );
   }
 
   return (
-    <OuterCard innerClassName={isSelected ? "border-emerald-400/20 ring-1 ring-emerald-400/20 shadow-[0_22px_60px_rgba(16,185,129,0.12)]" : ""}>
+    <OuterCard innerClassName={isSelected ? "ring-1 ring-emerald-400/15" : ""}>
       <button
         type="button"
         onClick={onSelect}
@@ -61,14 +75,14 @@ export default function JourneyCard({ data, variant = "option", isSelected, isPr
               <span className={`${badgeBase} ${getStatusBadgeTone(status.key as any)}`}>{status.label}</span>
             </div>
             <div className={metaText}>{route.departureTime ?? "—"} → {route.arrivalTime ?? "—"}</div>
-            <div className="mt-3 text-3xl font-semibold leading-none text-white">{duration} min</div>
-            <div className={`mt-3 ${mutedXs}`}>Gång {walk} min · {transfers} byten</div>
+            <div className="mt-2 text-[24px] font-semibold leading-none text-white">{duration} min</div>
+            <div className={`mt-2 ${mutedXs}`}>Gång {walk} min · {transfers} byten</div>
           </div>
 
           <div className="shrink-0 text-right">
             <div className={metaText}>Gå senast</div>
-            <div className="mt-2 text-2xl font-semibold leading-none">{data.recommendedLeaveAt ?? "—"}</div>
-            <div className={`mt-3 ${smallText}`}>{leaveMin != null ? `Gå om ${leaveMin} min` : "Ingen rekommendation"}</div>
+            <div className="mt-2 text-[20px] font-semibold leading-none">{data.recommendedLeaveAt ?? "—"}</div>
+            <div className={`mt-2 ${smallText}`}>{leaveMin != null ? leaveLabel : "Ingen rekommendation"}</div>
           </div>
         </div>
       </button>
