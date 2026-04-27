@@ -11,13 +11,13 @@ export function BottomJourneyCta({
   label = "Hinner du med din resa?",
 }: BottomJourneyCtaProps) {
   return (
-    <div className="fixed inset-x-4 z-20 mx-auto max-w-3xl sm:inset-x-6" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 16px)' }}>
+    <div className="fixed inset-x-3 z-20 mx-auto max-w-[414px] sm:inset-x-6 sm:max-w-3xl" style={{ bottom: 'calc(env(safe-area-inset-bottom, 14px) + 8px)' }}>
       <button
-        className={`${ctaClass} transition hover:bg-emerald-400 sm:text-lg`}
+        className={`${ctaClass} transition hover:bg-emerald-400`}
         onClick={onClick}
         type="button"
       >
-        <span className="flex items-center gap-3">
+        <span className="flex items-center gap-1.5">
           <ArrowRight className={iconSize} />
           {label}
         </span>
