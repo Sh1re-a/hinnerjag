@@ -14,7 +14,7 @@ public class JourneyRequestMapper {
                 + "&name_origin=" + toCoordValue(request.originLng(), request.originLat())
                 + "&type_destination=coord"
                 + "&name_destination=" + toCoordValue(request.destinationLng(), request.destinationLat())
-                + "&calc_number_of_trips=4"
+                + "&calc_number_of_trips=3"
                 + "&language=en"
                 + "&route_type=leasttime"
                 + "&gen_c=true";
