@@ -1,11 +1,11 @@
 import { useState } from "react";
-import "./App.css";
 import { LocateFixed, Search } from "lucide-react";
-import { BottomJourneyCta } from "./components/BottomJourneyCta";
 import { BusBoard } from "./components/BusBoard";
+import { BottomNav } from "./components/BottomNav";
 import { LandingHeader } from "./components/LandingHeader";
 import { LocationDialog } from "./components/LocationDialog";
 import { MetroBoard } from "./components/MetroBoard";
+import AboutPage from "./pages/AboutPage";
 import JourneyPage from "./pages/JourneyPage";
 import { searchAddress } from "./hooks/useAddressSearch";
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
@@ -17,7 +17,7 @@ type AddressState = { lat: number; lng: number; label: string };
 function App() {
   const [showLocationDialog, setShowLocationDialog] = useState(true);
   const [manualPosition, setManualPosition] = useState<AddressState | null>(null);
-  const [currentView, setCurrentView] = useState<"landing" | "journey">("landing");
+  const [currentView, setCurrentView] = useState<"landing" | "journey" | "about">("landing");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AddressState[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -96,7 +96,7 @@ function App() {
           onSkip={() => setShowLocationDialog(false)}
         />
 
-        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[414px] flex-col px-3 pb-22 pt-3 sm:max-w-3xl sm:px-6">
+        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[414px] flex-col px-3 pb-24 pt-3 sm:max-w-3xl sm:px-6">
           <LandingHeader />
 
           {currentView === "landing" ? (
@@ -221,7 +221,7 @@ function App() {
                 />
               </section>
             </>
-          ) : (
+          ) : currentView === "journey" ? (
             <div className="w-full">
               <JourneyPage
                 onBack={() => setCurrentView("landing")}
@@ -231,12 +231,12 @@ function App() {
                 isLocating={isLocating}
               />
             </div>
+          ) : (
+            <AboutPage />
           )}
         </div>
 
-        {currentView === "landing" && (
-          <BottomJourneyCta onClick={() => setCurrentView("journey")} />
-        )}
+        <BottomNav currentView={currentView} onChange={setCurrentView} />
       </div>
     </main>
   );
