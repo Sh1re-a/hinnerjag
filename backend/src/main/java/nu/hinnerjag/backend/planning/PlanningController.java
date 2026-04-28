@@ -1,5 +1,6 @@
 package nu.hinnerjag.backend.planning;
 
+import jakarta.validation.Valid;
 import nu.hinnerjag.backend.planning.dto.JourneyPlanRequest;
 import nu.hinnerjag.backend.planning.dto.TripSummaryResponse;
 import nu.hinnerjag.backend.planning.service.PlanningService;
@@ -17,7 +18,7 @@ public class PlanningController {
     }
 
     @PostMapping("/journey")
-    public ResponseEntity<TripSummaryResponse> planJourney(@RequestBody JourneyPlanRequest request) {
+    public ResponseEntity<TripSummaryResponse> planJourney(@Valid @RequestBody JourneyPlanRequest request) {
         return ResponseEntity.ok(planningService.planJourney(request));
     }
 }
