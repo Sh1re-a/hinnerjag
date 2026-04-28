@@ -1,9 +1,9 @@
-import type { JourneyStop, JourneyTrip } from "../hooks/useJourneyPlan";
+import type { JourneySegment, JourneyStop, JourneyTrip } from "../hooks/useJourneyPlan";
 import { CheckCircle2, Clock3, Footprints, Route, Users } from "lucide-react";
 import { OuterCard } from "./CardBase";
 import TransportPill from "./TransportPill";
 import { sectionLabel, sectionTitle } from "./uiTokens";
-import { getJourneyInsights } from "../lib/journeyUi";
+import { getJourneyInsights, getLiveJourneyStatus } from "../lib/journeyUi";
 import JourneyCard from "./JourneyCard";
 
 type Props = {
@@ -11,6 +11,9 @@ type Props = {
   options?: JourneyTrip[];
   selectedOptionIndex?: number;
   onSelectOption?: (idx: number) => void;
+  currentTimeMs?: number;
+  originLabel?: string;
+  destinationLabel?: string;
 };
 
 export function JourneyResults({
@@ -18,12 +21,15 @@ export function JourneyResults({
   options = [],
   selectedOptionIndex = 0,
   onSelectOption,
+  currentTimeMs = Date.now(),
+  originLabel,
+  destinationLabel,
 }: Props) {
   const insights = getJourneyInsights(data);
   const optionLabels = buildOptionLabels(options);
-  const status = getOverviewStatus(data.recommendedLeaveInMinutes);
-  const leaveText = getLeaveText(data.recommendedLeaveAt, data.recommendedLeaveInMinutes);
-  const overviewSteps = buildOverviewSteps(data);
+  const status = getLiveJourneyStatus(data, currentTimeMs);
+  const leaveText = getLeaveText(data.recommendedLeaveAt, status.leaveLabel, status.leaveFieldLabel);
+  const overviewSteps = buildOverviewSteps(data, originLabel, destinationLabel);
   const footerTotal = data.realtimeDurationMinutes ?? data.plannedDurationMinutes;
   const helperNote = buildHelperNote(data);
   return (
@@ -43,6 +49,7 @@ export function JourneyResults({
                 isSelected={selectedOptionIndex === index}
                 optionLabel={optionLabels[index] ?? null}
                 onSelect={() => onSelectOption?.(index)}
+                currentTimeMs={currentTimeMs}
               />
             ))}
           </div>
@@ -83,12 +90,12 @@ export function JourneyResults({
                       : "text-rose-300"
                 }`}
               >
-                {status.label}
+                  {status.label}
+                </div>
+                <div className="mt-0.5 text-[11px] font-medium text-white/86">{leaveText}</div>
+                {helperNote && <div className="mt-1 text-[10px] leading-snug text-white/52">{helperNote}</div>}
               </div>
-              <div className="mt-0.5 text-[11px] font-medium text-white/86">{leaveText}</div>
-              {helperNote && <div className="mt-1 text-[10px] leading-snug text-white/52">{helperNote}</div>}
             </div>
-          </div>
         </div>
 
         {overviewSteps.length === 0 && (
@@ -243,7 +250,7 @@ function buildOptionLabels(options: JourneyTrip[]) {
     (option) => (option.walkingDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minWalking,
   ).length;
 
-  return options.map((option, index) => {
+  return options.map((option) => {
     if (
       durationCount === 1 &&
       (option.realisticDurationMinutes ?? option.plannedDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minDuration
@@ -256,33 +263,19 @@ function buildOptionLabels(options: JourneyTrip[]) {
     if (walkingCount === 1 && (option.walkingDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minWalking) {
       return "Mindre gång";
     }
-    if (index === 0) return "Första förslaget";
-    return "Alternativ";
+    return null;
   });
 }
 
-function getOverviewStatus(leaveMin?: number | null) {
-  if (leaveMin == null) {
-    return { label: "Gå nu", tone: "yellow" as const };
-  }
-  if (leaveMin < 0) {
-    return { label: "Du missar", tone: "red" as const };
-  }
-  if (leaveMin <= 1) {
-    return { label: "Gå nu", tone: "yellow" as const };
-  }
-  return { label: "Du hinner", tone: "green" as const };
-}
-
-function getLeaveText(leaveAt?: string | null, leaveMin?: number | null) {
+function getLeaveText(leaveAt?: string | null, leaveLabel?: string, leaveFieldLabel?: string) {
   const time = leaveAt ?? "—";
-  if (leaveMin == null) {
-    return `Gå senast ${time}`;
+  const prefix = leaveFieldLabel === "Skulle gått" ? "Skulle gått senast" : "Gå senast";
+
+  if (!leaveLabel) {
+    return `${prefix} ${time}`;
   }
-  if (leaveMin < 0) {
-    return `Gå senast ${time} · ${Math.abs(leaveMin)} min sent`;
-  }
-  return `Gå senast ${time} · ${leaveMin} min kvar`;
+
+  return `${prefix} ${time} · ${leaveLabel}`;
 }
 
 function buildHelperNote(data: JourneyTrip) {
@@ -305,16 +298,58 @@ function buildHelperNote(data: JourneyTrip) {
   return noteParts.join(" · ");
 }
 
-function buildOverviewSteps(data: JourneyTrip) {
+function buildOverviewSteps(data: JourneyTrip, originLabel?: string, destinationLabel?: string) {
   const segments = data.segments ?? [];
+  const steps: Array<{
+    kind: "walk" | "transit";
+    mode: string;
+    line: string | null;
+    title: string;
+    subtitle: string;
+    note: string | null;
+    connectorText: string | null;
+    meta: boolean | null;
+    duration: string;
+    departureTime: string | null;
+    arrivalTime: string | null;
+    stopCountLabel: string | null;
+    restLabel: string | null;
+  }> = [];
 
-  return segments.map((segment, index) => {
+  if (
+    segments.length > 0 &&
+    segments[0]?.type === "TRANSIT" &&
+    data.route?.boardingName &&
+    originLabel &&
+    data.stationTiming?.boardingMinutes != null
+  ) {
+    const firstTransit = segments[0];
+    const firstWalkTitle = `Gå till ${formatTransitStopName(firstTransit.from ?? data.route.boardingName, firstTransit.mode)}`;
+    steps.push({
+      kind: "walk",
+      mode: "Walk",
+      line: null,
+      title: firstWalkTitle,
+      subtitle: `Från ${originLabel}`,
+      note: isTunnelbanaMode(firstTransit.mode)
+        ? `${data.stationTiming.boardingMinutes} min till perrong`
+        : null,
+      connectorText: null,
+      meta: null,
+      duration: minutesLabel(data.stationTiming.boardingMinutes),
+      departureTime: null,
+      arrivalTime: null,
+      stopCountLabel: null,
+      restLabel: null,
+    });
+  }
+
+  segments.forEach((segment, index) => {
     const nextSegment = index < segments.length - 1 ? segments[index + 1] : null;
     const previousSegment = index > 0 ? segments[index - 1] : null;
 
     if (segment.type === "WALK") {
       const walkTiming = buildWalkTimingNote({
-        segment,
         nextSegment,
         previousSegment,
         stationTiming: data.stationTiming,
@@ -322,12 +357,26 @@ function buildOverviewSteps(data: JourneyTrip) {
         isLast: index === segments.length - 1,
       });
 
-      return {
+      steps.push({
         kind: "walk" as const,
         mode: segment.mode ?? "Walk",
         line: null,
-        title: buildWalkTitle(segment.from, segment.to),
-        subtitle: buildWalkSubtitle(segment.from),
+        title: buildWalkTitle({
+          segment,
+          nextSegment,
+          previousSegment,
+          isFirst: index === 0,
+          isLast: index === segments.length - 1,
+          destinationLabel,
+        }),
+        subtitle: buildWalkSubtitle({
+          segment,
+          nextSegment,
+          previousSegment,
+          isFirst: index === 0,
+          isLast: index === segments.length - 1,
+          originLabel,
+        }),
         note: walkTiming,
         connectorText: null,
         meta: null,
@@ -336,7 +385,8 @@ function buildOverviewSteps(data: JourneyTrip) {
         arrivalTime: null,
         stopCountLabel: null,
         restLabel: null,
-      };
+      });
+      return;
     }
 
     const line = segment.line ?? data.route?.line ?? null;
@@ -348,9 +398,9 @@ function buildOverviewSteps(data: JourneyTrip) {
     const departureTime = segment.departureTime ?? data.route?.departureTime ?? null;
     const arrivalTime = segment.arrivalTime ?? data.route?.arrivalTime ?? null;
     const stopCount = getStopCountForSegment(data.stops, from, to);
-    const connectorText = buildTransitConnectorText(to, nextSegment);
+    const connectorText = buildTransitConnectorText(to, segment.mode, nextSegment);
 
-    return {
+    steps.push({
       kind: "transit" as const,
       mode,
       line,
@@ -364,81 +414,141 @@ function buildOverviewSteps(data: JourneyTrip) {
       arrivalTime,
       stopCountLabel: `${stopCount} stopp`,
       restLabel: `Restid ${minutesLabel(segment.durationMinutes)}`,
-    };
+    });
   });
+
+  return steps;
 }
 
-function buildWalkTitle(from?: string | null, to?: string | null) {
-  if (to) return `Gå till ${to}`;
-  if (from && to) return `Gå från ${from} till ${to}`;
-  if (from) return `Gå från ${from}`;
+function buildWalkTitle({
+  segment,
+  nextSegment,
+  previousSegment,
+  isFirst,
+  isLast,
+  destinationLabel,
+}: {
+  segment: JourneySegment;
+  nextSegment?: JourneySegment | null;
+  previousSegment?: JourneySegment | null;
+  isFirst: boolean;
+  isLast: boolean;
+  destinationLabel?: string;
+}) {
+  if (isFirst && nextSegment?.type === "TRANSIT") {
+    return `Gå till ${formatTransitStopName(nextSegment.from ?? segment.to, nextSegment.mode)}`;
+  }
+
+  if (isLast && previousSegment?.type === "TRANSIT") {
+    const from = segment.from ?? "stationen";
+    const to = getPrimaryPlaceLabel(destinationLabel ?? segment.to, "destinationen");
+    return `Gå från ${from} till ${to}`;
+  }
+
+  if (previousSegment?.type === "TRANSIT" && nextSegment?.type === "TRANSIT") {
+    return "Byt och gå till nästa linje";
+  }
+
+  if (segment.from && segment.to) {
+    return `Gå från ${segment.from} till ${segment.to}`;
+  }
+
+  if (segment.to) return `Gå till ${segment.to}`;
+  if (segment.from) return `Gå från ${segment.from}`;
   return "Gå vidare";
 }
 
-function buildWalkSubtitle(from?: string | null) {
-  if (from) return `Från ${from}`;
+function buildWalkSubtitle({
+  segment,
+  nextSegment,
+  previousSegment,
+  isFirst,
+  isLast,
+  originLabel,
+}: {
+  segment: JourneySegment;
+  nextSegment?: JourneySegment | null;
+  previousSegment?: JourneySegment | null;
+  isFirst: boolean;
+  isLast: boolean;
+  originLabel?: string;
+}) {
+  if (isFirst && nextSegment?.type === "TRANSIT") {
+    return originLabel ? `Från ${originLabel}` : segment.from ? `Från ${segment.from}` : "Från din plats";
+  }
+
+  if (isLast && previousSegment?.type === "TRANSIT") {
+    return `Från ${formatTransitSourceLabel(segment.from, previousSegment.mode)}`;
+  }
+
+  if (previousSegment?.type === "TRANSIT" && nextSegment?.type === "TRANSIT") {
+    const from = segment.from ?? "byte";
+    const to = segment.to ?? "nästa linje";
+    return `${from} → ${to}`;
+  }
+
+  if (segment.from) {
+    return `Från ${segment.from}`;
+  }
+
   return "Nästa steg i resan";
 }
 
 function buildTransitConnectorText(
   to?: string | null,
+  currentMode?: string | null,
   nextSegment?: { type?: string | null; mode?: string | null; line?: string | null; toward?: string | null } | null,
 ) {
   if (nextSegment?.type === "TRANSIT") {
     const nextMode = getTransitLabel(nextSegment.mode);
     const nextLine = nextSegment.line ? ` ${nextSegment.line}` : "";
-    const nextToward = nextSegment.toward ? ` mot ${nextSegment.toward}` : "";
-    return `Byt vid ${to ?? "nästa station"} till ${nextMode}${nextLine}${nextToward}`;
+    return `Byt vid ${formatTransitSourceLabel(to, currentMode)} till ${nextMode}${nextLine}`;
   }
 
   if (nextSegment?.type === "WALK") {
-    return `Gå av vid ${to ?? "slutstationen"}`;
+    return `Gå av vid ${formatTransitSourceLabel(to, currentMode)}`;
   }
 
   return null;
 }
 
 function buildWalkTimingNote({
-  segment,
   nextSegment,
   previousSegment,
   stationTiming,
   isFirst,
   isLast,
 }: {
-  segment: { from?: string | null; to?: string | null };
-  nextSegment?: { type?: string | null; mode?: string | null } | null;
-  previousSegment?: { type?: string | null; mode?: string | null } | null;
+  nextSegment?: JourneySegment | null;
+  previousSegment?: JourneySegment | null;
   stationTiming?: JourneyTrip["stationTiming"];
   isFirst: boolean;
   isLast: boolean;
 }) {
   if (isFirst && nextSegment?.type === "TRANSIT" && isTunnelbanaMode(nextSegment.mode)) {
-    const stationName = appendStation(segment.to);
     const minutes = stationTiming?.boardingMinutes;
-    const reason = stationTiming?.boardingReason;
-    if (minutes != null && reason) return `Till ${stationName} · ${minutes} min till plattform · ${reason}`;
-    if (minutes != null) return `Till ${stationName} · ${minutes} min till plattform`;
-    if (reason) return `Till ${stationName} · ${reason}`;
-    return stationName ? `Till ${stationName}` : null;
+    if (minutes != null) return `${minutes} min till perrong`;
+    return null;
+  }
+
+  if (isFirst && nextSegment?.type === "TRANSIT" && isBusMode(nextSegment.mode)) {
+    const minutes = stationTiming?.boardingMinutes;
+    if (minutes != null) return `${minutes} min till hållplats`;
+    return null;
   }
 
   if (isLast && previousSegment?.type === "TRANSIT" && isTunnelbanaMode(previousSegment.mode)) {
-    const stationName = appendStation(segment.from);
     const minutes = stationTiming?.arrivalMinutes;
-    const reason = stationTiming?.arrivalReason;
-    if (minutes != null && reason) return `Från ${stationName} · ${minutes} min från station · ${reason}`;
-    if (minutes != null) return `Från ${stationName} · ${minutes} min från station`;
-    if (reason) return `Från ${stationName} · ${reason}`;
-    return stationName ? `Från ${stationName}` : null;
+    if (minutes != null) return `${minutes} min från perrong`;
+    return "Från station";
+  }
+
+  if (previousSegment?.type === "TRANSIT" && nextSegment?.type === "TRANSIT") {
+    const nextLine = nextSegment.line ? `${getTransitLabel(nextSegment.mode)} ${nextSegment.line}` : getTransitLabel(nextSegment.mode);
+    return `Följ skyltar mot ${nextLine}`;
   }
 
   return null;
-}
-
-function appendStation(name?: string | null) {
-  if (!name) return null;
-  return name.toLowerCase().includes("station") ? name : `${name} station`;
 }
 
 function isPlatformRelevant(mode?: string | null) {
@@ -450,12 +560,60 @@ function isTunnelbanaMode(mode?: string | null) {
   return normalized.includes("metro") || normalized.includes("subway") || normalized.includes("tunnel");
 }
 
+function isBusMode(mode?: string | null) {
+  const normalized = (mode ?? "").toLowerCase();
+  return normalized.includes("bus");
+}
+
 function getTransitLabel(mode?: string | null) {
   const normalized = (mode ?? "").toLowerCase();
   if (isTunnelbanaMode(normalized)) return "Tunnelbana";
   if (normalized.includes("bus")) return "Buss";
+  if (normalized.includes("train") || normalized.includes("rail")) return "Tåg";
   if (!mode) return "Tunnelbana";
   return mode;
+}
+
+function formatTransitStopName(name?: string | null, mode?: string | null) {
+  const base = getPrimaryPlaceLabel(name, "stationen");
+  const normalized = (mode ?? "").toLowerCase();
+
+  if (isTunnelbanaMode(normalized)) {
+    return `${base} T-bana`;
+  }
+
+  if (normalized.includes("bus")) {
+    return `${base} busshållplats`;
+  }
+
+  if (normalized.includes("train") || normalized.includes("rail")) {
+    return `${base} station`;
+  }
+
+  return base;
+}
+
+function formatTransitSourceLabel(name?: string | null, mode?: string | null) {
+  const base = getPrimaryPlaceLabel(name, "stationen");
+  const normalized = (mode ?? "").toLowerCase();
+
+  if (isTunnelbanaMode(normalized) || normalized.includes("train") || normalized.includes("rail")) {
+    return `${base} station`;
+  }
+
+  if (normalized.includes("bus")) {
+    return `${base} busshållplats`;
+  }
+
+  return base;
+}
+
+function getPrimaryPlaceLabel(value?: string | null, fallback = "platsen") {
+  if (!value || !value.trim()) return fallback;
+
+  const [firstPart] = value.split(",");
+  const trimmed = firstPart?.trim();
+  return trimmed || value.trim();
 }
 
 function getStopCountForSegment(stops: JourneyStop[] | undefined, from?: string | null, to?: string | null) {
