@@ -6,6 +6,16 @@ import type {
 } from "../hooks/useJourneyPlan";
 import { getStatusFromLeave } from "../components/boardUi";
 
+export type LiveJourneyStatus = {
+  key: "SAFE" | "TIGHT" | "ALREADY_LEFT" | "MISS";
+  label: string;
+  tone: "green" | "yellow" | "red";
+  leaveLabel: string;
+  summaryLabel: string;
+  leaveFieldLabel: string;
+  leaveDiffMinutes: number | null;
+};
+
 export type JourneyInsightItem = {
   title: string;
   detail: string;
@@ -209,6 +219,37 @@ export function getSummarySteps(data: JourneyTrip) {
   });
 }
 
+export function getLiveJourneyStatus(data: JourneyTrip, currentTimeMs: number) {
+  const fallbackLeaveMin = data.recommendedLeaveInMinutes ?? null;
+  const fallbackStatus = getStatusFromLeave(fallbackLeaveMin);
+  const departureAt = parseTimeNearNow(data.route?.departureTime, currentTimeMs);
+  const leaveAt = parseLeaveTime(data.recommendedLeaveAt, departureAt, currentTimeMs);
+
+  if (!leaveAt) {
+    if (fallbackStatus.key === "MISS") {
+      return buildLiveStatus("MISS", null, data.recommendedLeaveAt);
+    }
+    if (fallbackStatus.key === "TIGHT") {
+      return buildLiveStatus("TIGHT", fallbackLeaveMin, data.recommendedLeaveAt);
+    }
+    return buildLiveStatus("SAFE", fallbackLeaveMin, data.recommendedLeaveAt);
+  }
+
+  const leaveDiffMinutes = getMinuteDiff(currentTimeMs, leaveAt.getTime());
+  const departurePassed = departureAt ? currentTimeMs >= departureAt.getTime() : false;
+
+  if (departurePassed) {
+    return buildLiveStatus("MISS", leaveDiffMinutes, data.recommendedLeaveAt);
+  }
+  if (leaveDiffMinutes >= 2) {
+    return buildLiveStatus("SAFE", leaveDiffMinutes, data.recommendedLeaveAt);
+  }
+  if (leaveDiffMinutes >= 0) {
+    return buildLiveStatus("TIGHT", leaveDiffMinutes, data.recommendedLeaveAt);
+  }
+  return buildLiveStatus("ALREADY_LEFT", leaveDiffMinutes, data.recommendedLeaveAt);
+}
+
 function buildStepLabel(segment: JourneySegment, index: number, transitIndex: number) {
   if (segment.type === "WALK") {
     return `Gå till ${getDisplayPlace(index === 0 ? segment.to : segment.to, "destination")}`;
@@ -217,6 +258,61 @@ function buildStepLabel(segment: JourneySegment, index: number, transitIndex: nu
     return transitIndex > 0 ? `Byt till ${segment.mode} ${segment.line}` : `Ta ${segment.mode} ${segment.line}`;
   }
   return segment.mode ?? segment.type ?? "Ressteg";
+}
+
+function buildLiveStatus(
+  key: LiveJourneyStatus["key"],
+  leaveDiffMinutes: number | null,
+  _leaveAt?: string | null,
+): LiveJourneyStatus {
+  if (key === "SAFE") {
+    const leaveLabel =
+      leaveDiffMinutes == null ? "Du hinner" : leaveDiffMinutes > 0 ? `${leaveDiffMinutes} min kvar` : "Gå nu";
+    return {
+      key,
+      tone: "green",
+      label: "Du hinner",
+      summaryLabel: "Du hinner!",
+      leaveFieldLabel: "Gå senast",
+      leaveLabel,
+      leaveDiffMinutes,
+    };
+  }
+
+  if (key === "TIGHT") {
+    return {
+      key,
+      tone: "yellow",
+      label: "Gå nu",
+      summaryLabel: "Gå nu",
+      leaveFieldLabel: "Gå senast",
+      leaveLabel: leaveDiffMinutes == null || leaveDiffMinutes <= 0 ? "Gå nu" : `${leaveDiffMinutes} min kvar`,
+      leaveDiffMinutes,
+    };
+  }
+
+  if (key === "ALREADY_LEFT") {
+    const lateBy = leaveDiffMinutes == null ? null : Math.abs(leaveDiffMinutes);
+    return {
+      key,
+      tone: "red",
+      label: "Du missar",
+      summaryLabel: "Om du inte redan gått, missar du",
+      leaveFieldLabel: "Skulle gått",
+      leaveLabel: lateBy == null ? "för sent" : `${lateBy} min för sent`,
+      leaveDiffMinutes,
+    };
+  }
+
+  return {
+    key,
+    tone: "red",
+    label: "Du missar",
+    summaryLabel: "Du missar",
+    leaveFieldLabel: "Skulle gått",
+    leaveLabel: "för sent",
+    leaveDiffMinutes,
+  };
 }
 
 function buildStepDetail(segment: JourneySegment, index: number, totalSegments: number) {
@@ -265,6 +361,60 @@ function formatOccupancy(occupancy?: string | null) {
     detail: (route: JourneyTrip["route"]) =>
       `${route?.mode ?? "Resan"} ${route?.line ?? ""} ser normal ut just nu.`.trim(),
   };
+}
+
+function parseLeaveTime(
+  leaveTime?: string | null,
+  departureAt?: Date | null,
+  currentTimeMs?: number,
+) {
+  if (!leaveTime) return null;
+
+  if (departureAt) {
+    const [hours, minutes] = leaveTime.split(":").map(Number);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+
+    const candidate = new Date(departureAt);
+    candidate.setHours(hours, minutes, 0, 0);
+
+    if (candidate.getTime() - departureAt.getTime() > 6 * 60 * 60 * 1000) {
+      candidate.setDate(candidate.getDate() - 1);
+    }
+
+    return candidate;
+  }
+
+  return parseTimeNearNow(leaveTime, currentTimeMs ?? Date.now());
+}
+
+function parseTimeNearNow(time?: string | null, currentTimeMs: number = Date.now()) {
+  if (!time) return null;
+
+  const [hours, minutes] = time.split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+
+  const now = new Date(currentTimeMs);
+  const candidate = new Date(now);
+  candidate.setHours(hours, minutes, 0, 0);
+
+  const diffMs = candidate.getTime() - currentTimeMs;
+  if (diffMs < -12 * 60 * 60 * 1000) {
+    candidate.setDate(candidate.getDate() + 1);
+  } else if (diffMs > 12 * 60 * 60 * 1000) {
+    candidate.setDate(candidate.getDate() - 1);
+  }
+
+  return candidate;
+}
+
+function getMinuteDiff(currentTimeMs: number, targetTimeMs: number) {
+  const diffSeconds = Math.round((targetTimeMs - currentTimeMs) / 1000);
+
+  if (diffSeconds >= 0) {
+    return Math.ceil(diffSeconds / 60);
+  }
+
+  return Math.floor(diffSeconds / 60);
 }
 
 function formatTimingInsight(timing: StationTiming): JourneyInsightItem | null {

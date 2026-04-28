@@ -47,6 +47,7 @@ export function JourneyPage({
 
   const plan = useJourneyPlan();
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
 
   useEffect(() => {
     if (originPreset && !manualOriginMode) {
@@ -58,6 +59,14 @@ export function JourneyPage({
   useEffect(() => {
     setSelectedOptionIndex(0);
   }, [plan.data]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, 30_000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const canSubmit = Boolean(origin && destination && !plan.isPending);
   const originDisplayLabel = useMemo(() => {
@@ -336,13 +345,16 @@ export function JourneyPage({
             </div>
           )}
 
-          {activeTrip && <JourneyCard data={activeTrip} variant="summary" />}
+          {activeTrip && <JourneyCard data={activeTrip} variant="summary" currentTimeMs={currentTimeMs} />}
 
           <JourneyResults
             data={activeTrip}
             options={tripOptions}
             selectedOptionIndex={selectedOptionIndex}
             onSelectOption={setSelectedOptionIndex}
+            currentTimeMs={currentTimeMs}
+            originLabel={originDisplayLabel}
+            destinationLabel={resultTitle}
           />
         </div>
       )}
