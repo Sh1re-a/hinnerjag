@@ -51,12 +51,13 @@ public class JourneyTimingService {
 
         Duration duration = Duration.between(ZonedDateTime.now(STOCKHOLM_ZONE), leaveAt);
 
-        if (duration.isNegative() || duration.isZero()) {
-            return 0;
+        long seconds = duration.getSeconds();
+
+        if (seconds >= 0) {
+            return (int) Math.ceil(seconds / 60.0);
         }
 
-        long seconds = duration.getSeconds();
-        return (int) Math.ceil(seconds / 60.0);
+        return (int) Math.floor(seconds / 60.0);
     }
 
     public Integer calculateRealisticDurationMinutes(JourneyDto journey) {

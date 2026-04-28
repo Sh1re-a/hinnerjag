@@ -9,6 +9,7 @@ import nu.hinnerjag.backend.planning.dto.*;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -49,9 +50,13 @@ public class PlanningService {
     }
 
     private TripSummaryResponse buildTripSummaryFromResponse(JourneyPlannerResponse response) {
-        JourneyDto firstJourney = journeySelectionService.extractFirstJourney(response);
-        TripOptionResponse primaryTrip = buildTripOption(firstJourney);
         List<TripOptionResponse> options = buildTripOptions(response);
+
+        if (options.isEmpty()) {
+            throw new IllegalStateException("No journeys returned from Trafiklab");
+        }
+
+        TripOptionResponse primaryTrip = options.get(0);
 
         return new TripSummaryResponse(
                 primaryTrip.plannedDurationMinutes(),
@@ -85,7 +90,62 @@ public class PlanningService {
             options.add(buildTripOption(journey));
         }
 
+        options.sort(buildTripPriorityComparator());
         return options;
+    }
+
+    private Comparator<TripOptionResponse> buildTripPriorityComparator() {
+        return Comparator
+                .comparingInt(this::getCatchabilityBucket)
+                .thenComparing(this::getLeaveMarginMinutes, Comparator.reverseOrder())
+                .thenComparing(this::getDurationMinutes)
+                .thenComparing(this::getTransfers)
+                .thenComparing(this::getWalkingMinutes)
+                .thenComparing(this::getDepartureTime, Comparator.nullsLast(String::compareTo));
+    }
+
+    private int getCatchabilityBucket(TripOptionResponse trip) {
+        Integer leaveInMinutes = trip.recommendedLeaveInMinutes();
+
+        if (leaveInMinutes == null) {
+            return 3;
+        }
+        if (leaveInMinutes >= 2) {
+            return 0;
+        }
+        if (leaveInMinutes >= 0) {
+            return 1;
+        }
+        return 2;
+    }
+
+    private Integer getLeaveMarginMinutes(TripOptionResponse trip) {
+        return trip.recommendedLeaveInMinutes() != null ? trip.recommendedLeaveInMinutes() : Integer.MIN_VALUE;
+    }
+
+    private Integer getDurationMinutes(TripOptionResponse trip) {
+        if (trip.realisticDurationMinutes() != null) {
+            return trip.realisticDurationMinutes();
+        }
+        if (trip.realtimeDurationMinutes() != null) {
+            return trip.realtimeDurationMinutes();
+        }
+        if (trip.plannedDurationMinutes() != null) {
+            return trip.plannedDurationMinutes();
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    private Integer getTransfers(TripOptionResponse trip) {
+        return trip.transfers() != null ? trip.transfers() : Integer.MAX_VALUE;
+    }
+
+    private Integer getWalkingMinutes(TripOptionResponse trip) {
+        return trip.walkingDurationMinutes() != null ? trip.walkingDurationMinutes() : Integer.MAX_VALUE;
+    }
+
+    private String getDepartureTime(TripOptionResponse trip) {
+        return trip.route() != null ? trip.route().departureTime() : null;
     }
 
     private TripOptionResponse buildTripOption(JourneyDto journey) {
