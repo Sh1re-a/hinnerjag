@@ -42,11 +42,6 @@ public class PlanningService {
         this.journeyTimingService = journeyTimingService;
     }
 
-    public TripSummaryResponse getTestTrip() {
-        JourneyPlannerResponse response = trafiklabJourneyClient.fetchTestTrip();
-        return buildTripSummaryFromResponse(response);
-    }
-
     public TripSummaryResponse planJourney(JourneyPlanRequest request) {
         String url = journeyRequestMapper.buildTripsUrl(request);
         JourneyPlannerResponse response = trafiklabJourneyClient.fetchJourneyByUrl(url);

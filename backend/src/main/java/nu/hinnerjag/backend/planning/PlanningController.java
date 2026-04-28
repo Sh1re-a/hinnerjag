@@ -6,7 +6,6 @@ import nu.hinnerjag.backend.planning.service.PlanningService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
 @RestController
 @RequestMapping("/api/plans")
 public class PlanningController {
@@ -15,11 +14,6 @@ public class PlanningController {
 
     public PlanningController(PlanningService planningService) {
         this.planningService = planningService;
-    }
-
-    @GetMapping("/test-trip")
-    public ResponseEntity<TripSummaryResponse> testTrip() {
-        return ResponseEntity.ok(planningService.getTestTrip());
     }
 
     @PostMapping("/journey")
