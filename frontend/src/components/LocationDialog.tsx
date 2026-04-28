@@ -1,5 +1,6 @@
 import { LocateFixed, ShieldCheck } from "lucide-react";
-import { ctaClass, sectionLabel, subtleButton } from "./uiTokens";
+import BrandWordmark from "./BrandWordmark";
+import { ctaClass, subtleButton } from "./uiTokens";
 
 type LocationDialogProps = {
   open: boolean;
@@ -25,7 +26,7 @@ export function LocationDialog({
       <div className="w-full max-w-[420px] rounded-[22px] border border-white/10 bg-[#121821]/95 p-5 text-white shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className={sectionLabel}>HINNER JAG</div>
+            <BrandWordmark />
             <h2 className="mt-2 text-[26px] font-semibold leading-tight">
               Se om du hinner nära dig
             </h2>

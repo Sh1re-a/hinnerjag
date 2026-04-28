@@ -1,11 +1,11 @@
-import { sectionLabel } from "./uiTokens";
+import BrandWordmark from "./BrandWordmark";
 
 export function LandingHeader() {
   return (
     <div className="px-1 pt-1">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 pt-1">
-          <p className={sectionLabel}>HINNER JAG</p>
+          <BrandWordmark />
         </div>
 
         <div className="inline-flex items-center gap-1.5 px-1 py-1 text-[11px] font-medium text-emerald-300">
