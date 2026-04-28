@@ -1,4 +1,5 @@
 import { LocateFixed, ShieldCheck } from "lucide-react";
+import { ctaClass, sectionLabel, subtleButton } from "./uiTokens";
 
 type LocationDialogProps = {
   open: boolean;
@@ -20,47 +21,50 @@ export function LocationDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-6 pt-20 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-sm rounded-4xl border border-white/10 bg-slate-900/95 p-6 text-white shadow-2xl">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-600/20 text-blue-300">
-          <LocateFixed size={30} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
+      <div className="w-full max-w-[420px] rounded-[22px] border border-white/10 bg-[#121821]/95 p-5 text-white shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className={sectionLabel}>HINNER JAG</div>
+            <h2 className="mt-2 text-[26px] font-semibold leading-tight">
+              Se om du hinner nära dig
+            </h2>
+          </div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-sky-400/20 bg-sky-500/10 text-sky-300">
+            <LocateFixed size={20} />
+          </div>
         </div>
 
-        <h2 className="mt-5 text-center text-3xl font-semibold">
-          Tillåt din position?
-        </h2>
-
-        <p className="mt-3 text-center text-sm leading-6 text-white/70">
-          Vi använder din position för att visa närmaste tåg och bussar direkt
-          när appen öppnas.
+        <p className="mt-3 text-sm leading-6 text-white/68">
+          Tillåt din plats för att visa tunnelbana, buss och restider direkt när appen öppnas.
         </p>
 
         <button
           onClick={onAllow}
           disabled={isLocating}
-          className="btn btn-primary mt-6 h-14 w-full rounded-2xl text-base"
+          className={`${ctaClass} mt-5 h-12 w-full rounded-[18px]`}
           type="button"
         >
-          {isLocating ? "Hämtar position..." : "Tillåt"}
+          {isLocating ? "Hämtar plats..." : "Tillåt plats"}
         </button>
 
         <button
           onClick={onSkip}
-          className="btn btn-ghost mt-3 h-14 w-full rounded-2xl text-base text-white/80"
+          className={`${subtleButton} mt-2 h-11 w-full border-transparent bg-transparent text-white/72 hover:bg-white/[0.04]`}
           type="button"
         >
-          Inte nu
+          Fortsätt utan
         </button>
 
         {locationError && (
-          <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <p className="mt-3 rounded-[16px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
             {locationError}
           </p>
         )}
 
-        <div className="mt-5 flex items-center justify-center gap-2 text-center text-xs text-white/45">
+        <div className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-white/45">
           <ShieldCheck size={14} />
-          Din position används endast för att visa närmaste avgångar.
+          Din plats används bara för att visa avgångar nära dig.
         </div>
       </div>
     </div>
