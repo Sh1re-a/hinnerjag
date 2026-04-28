@@ -32,7 +32,7 @@ export function JourneyResults({
         <div className="space-y-2">
           <div>
             <div className={sectionLabel}>Fler resor</div>
-            <h3 className={`mt-1 ${sectionTitle}`}>Välj den som passar bäst</h3>
+            <h3 className={`mt-1 ${sectionTitle}`}>Välj en resa</h3>
           </div>
           <div className="space-y-2">
             {options.map((option, index) => (
@@ -40,7 +40,6 @@ export function JourneyResults({
                 key={`${option.route?.departureTime ?? "trip"}-${index}`}
                 data={option}
                 variant="option"
-                isPrimary={index === 0}
                 isSelected={selectedOptionIndex === index}
                 optionLabel={optionLabels[index] ?? null}
                 onSelect={() => onSelectOption?.(index)}
@@ -49,6 +48,142 @@ export function JourneyResults({
           </div>
         </div>
       )}
+
+      <OuterCard innerClassName="rounded-[18px] border border-white/10 bg-white/[0.02] p-2.5">
+        <div className={sectionLabel}>Resan i korthet</div>
+
+        <div
+          className={`mt-2.5 rounded-[16px] border px-3 py-2 ${
+            status.tone === "green"
+              ? "border-emerald-500/20 bg-emerald-500/10"
+              : status.tone === "yellow"
+                ? "border-amber-500/20 bg-amber-500/10"
+                : "border-rose-500/20 bg-rose-500/10"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                status.tone === "green"
+                  ? "bg-emerald-400 text-[#06281c]"
+                  : status.tone === "yellow"
+                    ? "bg-amber-400 text-[#2b1a04]"
+                    : "bg-rose-400 text-[#2f0911]"
+              }`}
+            >
+              <CheckCircle2 className="h-4.5 w-4.5" />
+            </div>
+            <div className="min-w-0">
+              <div
+                className={`text-[13px] font-semibold ${
+                  status.tone === "green"
+                    ? "text-emerald-300"
+                    : status.tone === "yellow"
+                      ? "text-amber-300"
+                      : "text-rose-300"
+                }`}
+              >
+                {status.label}
+              </div>
+              <div className="mt-0.5 text-[11px] font-medium text-white/86">{leaveText}</div>
+              {helperNote && <div className="mt-1 text-[10px] leading-snug text-white/52">{helperNote}</div>}
+            </div>
+          </div>
+        </div>
+
+        {overviewSteps.length === 0 && (
+          <div className="mt-3 text-sm text-white/55">Inga steg tillgängliga ännu.</div>
+        )}
+
+        <div className="mt-2.5 space-y-1.5">
+          {overviewSteps.map((segment, idx) => (
+            <div key={`${segment.title}-${idx}`}>
+              <div className="rounded-[14px] border border-white/10 bg-white/[0.018] px-3 py-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] ${
+                        segment.kind === "walk" ? "bg-emerald-500/16" : "bg-sky-500/12"
+                      }`}
+                    >
+                      {segment.kind === "walk" ? (
+                        <Footprints className="h-4.5 w-4.5 text-emerald-300" />
+                      ) : (
+                        <TransportPill line={segment.line} mode={segment.mode} size="sm" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[14px] font-semibold leading-snug text-white">{segment.title}</div>
+                      <div className="mt-0.5 text-[11px] leading-snug text-white/56">{segment.subtitle}</div>
+                      {segment.note && (
+                        <div className="mt-1 text-[10px] leading-snug text-white/47">{segment.note}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    className={`shrink-0 pt-0.5 text-right font-mono text-[14px] font-semibold ${
+                      segment.kind === "walk" ? "text-emerald-300" : "text-sky-300"
+                    }`}
+                  >
+                    {segment.duration}
+                  </div>
+                </div>
+
+                {segment.meta && (
+                  <div className="mt-2 grid grid-cols-3 gap-2 border-t border-white/6 pt-2">
+                    <div>
+                      <div className="text-[10px] text-white/38">Avgår</div>
+                      <div className="mt-0.5 text-[12px] font-semibold text-white">{segment.departureTime ?? "—"}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[10px] text-white/38">{segment.stopCountLabel ?? "Resa"}</div>
+                      <div className="mt-0.5 text-[10px] text-white/62">{segment.restLabel}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-white/38">Framme</div>
+                      <div className="mt-0.5 text-[12px] font-semibold text-white">{segment.arrivalTime ?? "—"}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {segment.connectorText && (
+                <div className="px-3 py-1 text-[10px] text-white/44">
+                  {segment.connectorText}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-[14px] border border-white/10 bg-white/[0.018] px-3 py-2.5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-white/55">
+              <Clock3 className="h-4 w-4" />
+              <span className="text-[11px]">Total restid</span>
+            </div>
+            <div className="mt-1 text-[15px] font-semibold text-emerald-300">{minutesLabel(footerTotal)}</div>
+            <div className="mt-0.5 text-[11px] text-white/45">inkl. gång</div>
+          </div>
+          <div className="min-w-0 border-x border-white/6 px-3">
+            <div className="flex items-center gap-2 text-white/55">
+              <Route className="h-4 w-4" />
+              <span className="text-[11px]">Gångtid</span>
+            </div>
+            <div className="mt-1 text-[15px] font-semibold text-white">{minutesLabel(data.walkingDurationMinutes)}</div>
+            <div className="mt-0.5 text-[11px] text-white/45">från din data</div>
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-white/55">
+              <Users className="h-4 w-4" />
+              <span className="text-[11px]">Byten</span>
+            </div>
+            <div className="mt-1 text-[15px] font-semibold text-white">{data.transfers ?? 0}</div>
+            <div className="mt-0.5 text-[11px] text-white/45">{(data.transfers ?? 0) === 0 ? "Inga byten" : "Byten i resan"}</div>
+          </div>
+        </div>
+      </OuterCard>
 
       <OuterCard>
         <div className="mb-2 flex items-center justify-between gap-3">
@@ -86,142 +221,6 @@ export function JourneyResults({
           ))}
         </div>
       </OuterCard>
-
-      <OuterCard innerClassName="rounded-[18px] border border-white/10 bg-white/[0.02] p-2.5">
-        <div className={sectionLabel}>Resan i korthet</div>
-
-        <div
-          className={`mt-2.5 rounded-[16px] border px-3 py-2 ${
-            status.tone === "green"
-              ? "border-emerald-500/20 bg-emerald-500/10"
-              : status.tone === "yellow"
-                ? "border-amber-500/20 bg-amber-500/10"
-                : "border-rose-500/20 bg-rose-500/10"
-          }`}
-        >
-          <div className="flex items-start gap-3">
-            <div
-              className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                status.tone === "green"
-                  ? "bg-emerald-400 text-[#06281c]"
-                  : status.tone === "yellow"
-                    ? "bg-amber-400 text-[#2b1a04]"
-                    : "bg-rose-400 text-[#2f0911]"
-              }`}
-            >
-              <CheckCircle2 className="h-4.5 w-4.5" />
-            </div>
-            <div className="min-w-0">
-              <div
-                className={`text-[14px] font-semibold ${
-                  status.tone === "green"
-                    ? "text-emerald-300"
-                    : status.tone === "yellow"
-                      ? "text-amber-300"
-                      : "text-rose-300"
-                }`}
-              >
-                {status.label}
-              </div>
-              <div className="mt-0.5 text-[12px] font-medium text-white/88">{leaveText}</div>
-              {helperNote && <div className="mt-1 text-[11px] leading-snug text-white/54">{helperNote}</div>}
-            </div>
-          </div>
-        </div>
-
-        {overviewSteps.length === 0 && (
-          <div className="mt-3 text-sm text-white/55">Inga steg tillgängliga ännu.</div>
-        )}
-
-        <div className="mt-2.5 space-y-1.5">
-          {overviewSteps.map((segment, idx) => (
-            <div key={`${segment.title}-${idx}`}>
-              <div className="rounded-[14px] border border-white/10 bg-white/[0.018] px-3 py-2.5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] ${
-                        segment.kind === "walk" ? "bg-emerald-500/16" : "bg-sky-500/12"
-                      }`}
-                    >
-                      {segment.kind === "walk" ? (
-                        <Footprints className="h-4.5 w-4.5 text-emerald-300" />
-                      ) : (
-                        <TransportPill line={segment.line} mode={segment.mode} size="sm" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[15px] font-semibold leading-snug text-white">{segment.title}</div>
-                      <div className="mt-0.5 text-[12px] leading-snug text-white/58">{segment.subtitle}</div>
-                      {segment.note && (
-                        <div className="mt-1 text-[11px] leading-snug text-white/48">{segment.note}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div
-                    className={`shrink-0 pt-0.5 text-right font-mono text-[15px] font-semibold ${
-                      segment.kind === "walk" ? "text-emerald-300" : "text-sky-300"
-                    }`}
-                  >
-                    {segment.duration}
-                  </div>
-                </div>
-
-                {segment.meta && (
-                  <div className="mt-2 grid grid-cols-3 gap-2 border-t border-white/6 pt-2">
-                    <div>
-                      <div className="text-[11px] text-white/40">Avgår</div>
-                      <div className="mt-0.5 text-[13px] font-semibold text-white">{segment.departureTime ?? "—"}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-[11px] text-white/40">{segment.stopCountLabel ?? "Resa"}</div>
-                      <div className="mt-0.5 text-[11px] text-white/66">{segment.restLabel}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[11px] text-white/40">Framme</div>
-                      <div className="mt-0.5 text-[13px] font-semibold text-white">{segment.arrivalTime ?? "—"}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {segment.connectorText && (
-                <div className="px-3 py-1.5 text-[11px] text-white/46">
-                  {segment.connectorText}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-[14px] border border-white/10 bg-white/[0.018] px-3 py-2.5">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-white/55">
-              <Clock3 className="h-4 w-4" />
-              <span className="text-[11px]">Total restid</span>
-            </div>
-            <div className="mt-1 text-[15px] font-semibold text-emerald-300">{minutesLabel(footerTotal)}</div>
-            <div className="mt-0.5 text-[11px] text-white/45">inkl. gång</div>
-          </div>
-          <div className="min-w-0 border-x border-white/6 px-3">
-            <div className="flex items-center gap-2 text-white/55">
-              <Route className="h-4 w-4" />
-              <span className="text-[11px]">Gångtid</span>
-            </div>
-            <div className="mt-1 text-[15px] font-semibold text-white">{minutesLabel(data.walkingDurationMinutes)}</div>
-            <div className="mt-0.5 text-[11px] text-white/45">från din data</div>
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-white/55">
-              <Users className="h-4 w-4" />
-              <span className="text-[11px]">Byten</span>
-            </div>
-            <div className="mt-1 text-[15px] font-semibold text-white">{data.transfers ?? 0}</div>
-            <div className="mt-0.5 text-[11px] text-white/45">{(data.transfers ?? 0) === 0 ? "Inga byten" : "Byten i resan"}</div>
-          </div>
-        </div>
-      </OuterCard>
     </div>
   );
 }
@@ -236,12 +235,28 @@ function buildOptionLabels(options: JourneyTrip[]) {
   );
   const minTransfers = Math.min(...options.map((option) => option.transfers ?? Number.MAX_SAFE_INTEGER));
   const minWalking = Math.min(...options.map((option) => option.walkingDurationMinutes ?? Number.MAX_SAFE_INTEGER));
+  const durationCount = options.filter(
+    (option) => (option.realisticDurationMinutes ?? option.plannedDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minDuration,
+  ).length;
+  const transferCount = options.filter((option) => (option.transfers ?? Number.MAX_SAFE_INTEGER) === minTransfers).length;
+  const walkingCount = options.filter(
+    (option) => (option.walkingDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minWalking,
+  ).length;
 
   return options.map((option, index) => {
-    if (index === 0) return "Snabbast";
-    if ((option.transfers ?? Number.MAX_SAFE_INTEGER) === minTransfers) return "Minst byten";
-    if ((option.walkingDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minWalking) return "Mindre gång";
-    if ((option.realisticDurationMinutes ?? option.plannedDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minDuration) return "Snabb";
+    if (
+      durationCount === 1 &&
+      (option.realisticDurationMinutes ?? option.plannedDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minDuration
+    ) {
+      return "Kortast tid";
+    }
+    if (transferCount === 1 && (option.transfers ?? Number.MAX_SAFE_INTEGER) === minTransfers) {
+      return "Minst byten";
+    }
+    if (walkingCount === 1 && (option.walkingDurationMinutes ?? Number.MAX_SAFE_INTEGER) === minWalking) {
+      return "Mindre gång";
+    }
+    if (index === 0) return "Första förslaget";
     return "Alternativ";
   });
 }
