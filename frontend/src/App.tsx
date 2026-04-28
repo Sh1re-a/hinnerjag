@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import "./App.css";
 import { LocateFixed, Search } from "lucide-react";
 import { BottomJourneyCta } from "./components/BottomJourneyCta";
@@ -29,10 +29,6 @@ function App() {
     ? { lat: manualPosition.lat, lng: manualPosition.lng }
     : position;
   const nearbyBoardQuery = useNearbyBoard(activePosition);
-
-  useEffect(() => {
-    console.debug("nearbyBoard: position=", activePosition, "data=", nearbyBoardQuery.data);
-  }, [activePosition, nearbyBoardQuery.data]);
 
   const errorMessage =
     nearbyBoardQuery.error instanceof Error
@@ -110,10 +106,10 @@ function App() {
                   onClick={() => {
                     setShowLocationDialog(true);
                   }}
-                  className="mt-4 rounded-full border border-white/10 bg-white/10 px-4 py-3 text-sm font-medium text-white/85 backdrop-blur transition hover:bg-white/15"
+                  className="mt-4 rounded-[18px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white/82 backdrop-blur transition hover:bg-white/[0.07]"
                   type="button"
                 >
-                  Tillat location for att se boarden
+                  Tillåt plats för att se avgångar nära dig
                 </button>
               )}
 
