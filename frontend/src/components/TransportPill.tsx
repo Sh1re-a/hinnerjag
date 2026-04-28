@@ -7,7 +7,7 @@ type Props = {
 };
 
 export default function TransportPill({ line, mode, size = "md" }: Props) {
-  const tone = getLineTone(({ transportMode: mode ?? undefined, line: line ?? undefined } as unknown) as any);
+  const tone = getLineTone({ transportMode: mode, line });
   const sizeClasses = size === "sm" ? "h-6 min-w-[24px] text-[11px] px-2" : "h-7 min-w-[28px] text-[12px] px-2.5";
 
   return (

@@ -4,7 +4,7 @@ import { useJourneyPlan } from "../hooks/useJourneyPlan";
 import type { JourneyPlanRequest, JourneyTrip } from "../hooks/useJourneyPlan";
 import { JourneyResults } from "../components/JourneyResults";
 import { LocateFixed, Search } from "lucide-react";
-import JourneySummaryCard from "../components/JourneySummaryCard";
+import JourneyCard from "../components/JourneyCard";
 import { OuterCard } from "../components/CardBase";
 import { getJourneyHeader } from "../lib/journeyUi";
 import {
@@ -336,7 +336,7 @@ export function JourneyPage({
             </div>
           )}
 
-          <JourneySummaryCard data={activeTrip} />
+          {activeTrip && <JourneyCard data={activeTrip} variant="summary" />}
 
           <JourneyResults
             data={activeTrip}

@@ -30,7 +30,7 @@ export default function JourneyCard({ data, variant = "option", isSelected, onSe
             <div className={metaText}>Rekommenderad avgång</div>
             <div className="mt-2 text-[26px] font-semibold leading-none text-white">{data.recommendedLeaveAt ?? "—"}</div>
             <div className="mt-2 flex items-center gap-2">
-              <span className={`${badgeBase} ${getStatusBadgeTone(status.key as any)}`}>{leaveLabel}</span>
+              <span className={`${badgeBase} ${getStatusBadgeTone(status.key)}`}>{leaveLabel}</span>
             </div>
             <div className={`mt-2 ${smallText}`}>För att hinna i tid</div>
           </div>
@@ -77,7 +77,7 @@ export default function JourneyCard({ data, variant = "option", isSelected, onSe
                   {optionLabel}
                 </span>
               )}
-              <span className={`${badgeBase} ${getStatusBadgeTone(status.key as any)}`}>{status.label}</span>
+              <span className={`${badgeBase} ${getStatusBadgeTone(status.key)}`}>{status.label}</span>
             </div>
             <div className={metaText}>{route.departureTime ?? "—"} → {route.arrivalTime ?? "—"}</div>
             <div className="mt-2 text-[24px] font-semibold leading-none text-white">{duration} min</div>

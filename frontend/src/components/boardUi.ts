@@ -1,4 +1,9 @@
-import type { Departure, Reachability } from "../hooks/useNearbyBoard";
+import type { Reachability } from "../hooks/useNearbyBoard";
+
+type LineToneInput = {
+  transportMode?: string | null;
+  line?: string | null;
+};
 
 export function getDepartureMessage(reachability: Reachability | null) {
   if (!reachability) {
@@ -32,7 +37,9 @@ export function getStatusTone(status: Reachability["status"] | undefined) {
   return "text-rose-400";
 }
 
-export function getStatusBadgeTone(status: Reachability["status"] | undefined) {
+export type LeaveStatusKey = "SAFE" | "TIGHT" | "MISS";
+
+export function getStatusBadgeTone(status: Reachability["status"] | LeaveStatusKey | undefined) {
   if (status === "SAFE") {
     return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
   }
@@ -48,7 +55,7 @@ export function formatDistance(distanceMeters: number) {
   return `${Math.round(distanceMeters)} m`;
 }
 
-export function getLineTone(departure: Departure) {
+export function getLineTone(departure: LineToneInput) {
   if (departure.transportMode === "BUS") {
     return "bg-rose-500 text-white";
   }
@@ -71,8 +78,6 @@ export function getLineTone(departure: Departure) {
 
   return "bg-slate-600 text-white";
 }
-
-export type LeaveStatusKey = "SAFE" | "TIGHT" | "MISS";
 
 export function getStatusFromLeave(leaveMin?: number | null) {
   if (leaveMin == null) return { label: "Risk", key: "TIGHT" as LeaveStatusKey };
