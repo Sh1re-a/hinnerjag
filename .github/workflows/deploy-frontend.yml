@@ -1,0 +1,55 @@
+name: Deploy frontend
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      REPOSITORY: ${{ vars.GCP_ARTIFACT_REGISTRY }}
+      SERVICE_NAME: ${{ vars.GCP_FRONTEND_SERVICE }}
+      IMAGE_NAME: hinnerjag-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Create frontend env
+        run: |
+          cat <<EOF > frontend/.env
+          VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+          VITE_MAPBOX_KEY=${{ secrets.VITE_MAPBOX_KEY }}
+          EOF
+
+      - name: Build image
+        run: |
+          gcloud builds submit frontend \
+            --tag "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE_NAME" \
+            --image "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA" \
+            --region "$REGION" \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 80
