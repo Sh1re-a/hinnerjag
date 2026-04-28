@@ -7,12 +7,11 @@ type Props = {
   data: JourneyTrip;
   variant?: "summary" | "option";
   isSelected?: boolean;
-  isPrimary?: boolean;
   onSelect?: () => void;
   optionLabel?: string | null;
 };
 
-export default function JourneyCard({ data, variant = "option", isSelected, isPrimary, onSelect, optionLabel }: Props) {
+export default function JourneyCard({ data, variant = "option", isSelected, onSelect, optionLabel }: Props) {
   const route = data.route ?? {};
   const leaveMin = data.recommendedLeaveInMinutes ?? null;
   const status = getStatusFromLeave(leaveMin);
@@ -58,22 +57,22 @@ export default function JourneyCard({ data, variant = "option", isSelected, isPr
   }
 
   return (
-    <OuterCard innerClassName={isSelected ? "ring-1 ring-emerald-400/15" : ""}>
+    <OuterCard innerClassName={isSelected ? "border border-emerald-400/25 bg-emerald-500/[0.03]" : ""}>
       <button
         type="button"
         onClick={onSelect}
-        className={`w-full text-left ${isPrimary ? "" : "opacity-95 hover:opacity-100"}`}
+        className="w-full text-left opacity-95 hover:opacity-100"
         aria-pressed={isSelected}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              {isPrimary && (
+              {isSelected && (
                 <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300">
-                  Bästa alternativet
+                  Vald resa
                 </span>
               )}
-              {!isPrimary && optionLabel && (
+              {!isSelected && optionLabel && (
                 <span className="inline-flex rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">
                   {optionLabel}
                 </span>
