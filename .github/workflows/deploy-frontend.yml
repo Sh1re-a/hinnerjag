@@ -49,7 +49,6 @@ jobs:
       - name: Build frontend image
         run: |
           docker build \
-            -f frontend/Dockerfile \
             -t "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA" \
             frontend
 

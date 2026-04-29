@@ -42,7 +42,6 @@ jobs:
       - name: Build backend image
         run: |
           docker build \
-            -f backend/Dockerfile \
             -t "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA" \
             backend
 
