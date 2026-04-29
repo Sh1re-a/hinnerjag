@@ -10,7 +10,15 @@ import JourneyPage from "./pages/JourneyPage";
 import { searchAddress } from "./hooks/useAddressSearch";
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
 import { useNearbyBoard } from "./hooks/useNearbyBoard";
-import { heroTitle, iconButton, iconSize, inputClass, metaText, sectionLabel, smallText } from "./components/uiTokens";
+import {
+  heroTitle,
+  iconButton,
+  iconSize,
+  inputClass,
+  metaText,
+  sectionLabel,
+  smallText,
+} from "./components/uiTokens";
 
 type AddressState = { lat: number; lng: number; label: string };
 
@@ -18,8 +26,12 @@ const LOCATION_PROMPT_DISMISSED_KEY = "hinnerjag-location-prompt-dismissed";
 
 function App() {
   const [showLocationDialog, setShowLocationDialog] = useState(false);
-  const [manualPosition, setManualPosition] = useState<AddressState | null>(null);
-  const [currentView, setCurrentView] = useState<"landing" | "journey" | "about">("landing");
+  const [manualPosition, setManualPosition] = useState<AddressState | null>(
+    null,
+  );
+  const [currentView, setCurrentView] = useState<
+    "landing" | "journey" | "about"
+  >("landing");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AddressState[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -31,7 +43,8 @@ function App() {
     let isMounted = true;
 
     const initLocationPrompt = async () => {
-      const dismissed = window.localStorage.getItem(LOCATION_PROMPT_DISMISSED_KEY) === "1";
+      const dismissed =
+        window.localStorage.getItem(LOCATION_PROMPT_DISMISSED_KEY) === "1";
 
       if (position) {
         if (isMounted) {
@@ -48,7 +61,9 @@ function App() {
       }
 
       try {
-        const permission = await navigator.permissions.query({ name: "geolocation" });
+        const permission = await navigator.permissions.query({
+          name: "geolocation",
+        });
 
         if (!isMounted) return;
 
@@ -192,7 +207,9 @@ function App() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className={metaText}>Aktiv plats</p>
-                    <p className="mt-1 truncate text-[13px] text-white/72">{addressLabel}</p>
+                    <p className="mt-1 truncate text-[13px] text-white/72">
+                      {addressLabel}
+                    </p>
                   </div>
                 </header>
 
@@ -264,7 +281,8 @@ function App() {
                       {perrongMinutes === null ? "--" : `${perrongMinutes} min`}
                     </p>
                     <p className={`mt-2 ${smallText}`}>
-                      {platformWalkMinutes === null || platformBufferMinutes === null
+                      {platformWalkMinutes === null ||
+                      platformBufferMinutes === null
                         ? "gång + spärr/trappa"
                         : `${platformWalkMinutes} min gång + ${platformBufferMinutes} min spärr/trappa`}
                     </p>
@@ -277,7 +295,9 @@ function App() {
                     <p className="mt-3 text-[18px] font-semibold leading-none text-emerald-300">
                       {busWalkMinutes === null ? "--" : `${busWalkMinutes} min`}
                     </p>
-                    <p className={`mt-2 ${smallText}`}>Gångavstånd till hållplats</p>
+                    <p className={`mt-2 ${smallText}`}>
+                      Gångavstånd till hållplats
+                    </p>
                   </div>
                 </div>
 
