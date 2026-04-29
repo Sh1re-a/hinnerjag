@@ -131,7 +131,7 @@ export function MetroBoard({
             </div>
 
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold leading-tight text-white">
+              <p className="truncate text-[14px] font-semibold leading-tight text-white">
                 {metro?.siteName ?? "-"}
               </p>
               {metro && (
@@ -192,21 +192,21 @@ export function MetroBoard({
                 return (
                   <div
                     key={`${departure.line}-${departure.destination}-${index}`}
-                    className="flex items-center justify-between gap-3 py-2.5"
+                    className="flex items-center justify-between gap-3 py-2"
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-600 text-[11px] font-semibold text-white">
                         {departure.line ?? "-"}
                       </div>
 
-                      <p className="truncate text-[14px] font-medium text-white">
+                      <p className="truncate text-[13px] font-medium text-white">
                         {departure.destination ?? "Okänd destination"}
                       </p>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1.5">
                       <p
-                        className={`font-mono text-[14px] font-semibold leading-none ${tone}`}
+                        className={`font-mono text-[13px] font-semibold leading-none ${tone}`}
                       >
                         {displayLabel}
                       </p>
@@ -227,7 +227,7 @@ export function MetroBoard({
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-white/8 px-3 py-2.5">
-                <p className="min-w-0 text-[13px] text-emerald-300">
+                <p className="min-w-0 text-[12px] text-emerald-300">
                   Tips:{" "}
                   {nextCatchableMinutes === null
                     ? "Du missar de närmaste avgångarna"

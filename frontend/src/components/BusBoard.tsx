@@ -136,7 +136,7 @@ export function BusBoard({
 
   return (
     <section className="overflow-hidden rounded-lg bg-[#171c22]/95 p-2 text-white shadow-sm sm:p-2.5">
-      <div className="mb-2 px-0.5">
+          <div className="mb-2 px-0.5">
         <div className="inline-flex items-center gap-2 text-sky-400">
           <BusFront size={15} />
           <p className={sectionLabel}>Buss nära dig</p>
@@ -196,7 +196,7 @@ export function BusBoard({
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate text-[15px] font-semibold leading-tight text-white">
+                      <p className="truncate text-[14px] font-semibold leading-tight text-white">
                         {stop.siteName}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/72">
@@ -236,21 +236,21 @@ export function BusBoard({
                       return (
                         <div
                           key={`${stop.siteId}-${departure.line}-${index}`}
-                          className="flex items-center justify-between gap-3 py-2.5"
+                          className="flex items-center justify-between gap-3 py-2"
                         >
                           <div className="flex min-w-0 items-center gap-2">
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-500 text-[11px] font-semibold text-white">
                               {departure.line ?? "-"}
                             </div>
 
-                            <p className="truncate text-[14px] font-medium text-white">
+                            <p className="truncate text-[13px] font-medium text-white">
                               {departure.destination ?? "Okänd destination"}
                             </p>
                           </div>
 
                           <div className="flex shrink-0 items-center gap-1.5">
                             <p
-                              className={`font-mono text-[14px] font-semibold leading-none ${tone}`}
+                              className={`font-mono text-[13px] font-semibold leading-none ${tone}`}
                             >
                               {displayLabel}
                             </p>

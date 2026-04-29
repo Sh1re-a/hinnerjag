@@ -6,7 +6,7 @@ type BottomNavProps = {
 };
 
 const itemBase =
-  "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition";
+  "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[18px] px-2 py-2 text-[11px] font-medium transition";
 
 export function BottomNav({ currentView, onChange }: BottomNavProps) {
   return (
@@ -14,7 +14,7 @@ export function BottomNav({ currentView, onChange }: BottomNavProps) {
       className="fixed inset-x-3 z-20 mx-auto max-w-[414px] sm:inset-x-6 sm:max-w-3xl"
       style={{ bottom: "calc(env(safe-area-inset-bottom, 14px) + 8px)" }}
     >
-      <nav className="flex items-center gap-1 rounded-[22px] border border-white/8 bg-[#131a24]/92 p-2 shadow-[0_18px_48px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+      <nav className="flex items-center gap-1 rounded-[20px] border border-white/8 bg-[#131a24]/92 p-1.5 shadow-[0_14px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
         <button
           type="button"
           onClick={() => onChange("landing")}

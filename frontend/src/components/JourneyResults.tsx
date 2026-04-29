@@ -60,7 +60,7 @@ export function JourneyResults({
         <div className={sectionLabel}>Resan i korthet</div>
 
         <div
-          className={`mt-2.5 rounded-[16px] border px-3 py-2 ${
+          className={`mt-2.5 rounded-[14px] border px-3 py-2 ${
             status.tone === "green"
               ? "border-emerald-500/20 bg-emerald-500/10"
               : status.tone === "yellow"
@@ -82,7 +82,7 @@ export function JourneyResults({
             </div>
             <div className="min-w-0">
               <div
-                className={`text-[13px] font-semibold ${
+                className={`text-[12px] font-semibold ${
                   status.tone === "green"
                     ? "text-emerald-300"
                     : status.tone === "yellow"
@@ -93,7 +93,7 @@ export function JourneyResults({
                   {status.label}
                 </div>
                 <div className="mt-0.5 text-[11px] font-medium text-white/86">{leaveText}</div>
-                {helperNote && <div className="mt-1 text-[10px] leading-snug text-white/52">{helperNote}</div>}
+                {helperNote && <div className="mt-1 text-[10px] leading-snug text-white/50">{helperNote}</div>}
               </div>
             </div>
         </div>
@@ -105,7 +105,7 @@ export function JourneyResults({
         <div className="mt-2.5 space-y-1.5">
           {overviewSteps.map((segment, idx) => (
             <div key={`${segment.title}-${idx}`}>
-              <div className="rounded-[14px] border border-white/10 bg-white/[0.018] px-3 py-2.5">
+              <div className="rounded-[14px] border border-white/10 bg-white/[0.018] px-3 py-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
                     <div
@@ -120,16 +120,16 @@ export function JourneyResults({
                       )}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[14px] font-semibold leading-snug text-white">{segment.title}</div>
-                      <div className="mt-0.5 text-[11px] leading-snug text-white/56">{segment.subtitle}</div>
+                      <div className="text-[13px] font-semibold leading-snug text-white">{segment.title}</div>
+                      <div className="mt-0.5 text-[11px] leading-snug text-white/54">{segment.subtitle}</div>
                       {segment.note && (
-                        <div className="mt-1 text-[10px] leading-snug text-white/47">{segment.note}</div>
+                        <div className="mt-1 text-[10px] leading-snug text-white/44">{segment.note}</div>
                       )}
                     </div>
                   </div>
 
                   <div
-                    className={`shrink-0 pt-0.5 text-right font-mono text-[14px] font-semibold ${
+                    className={`shrink-0 pt-0.5 text-right font-mono text-[13px] font-semibold ${
                       segment.kind === "walk" ? "text-emerald-300" : "text-sky-300"
                     }`}
                   >
@@ -156,7 +156,7 @@ export function JourneyResults({
               </div>
 
               {segment.connectorText && (
-                <div className="px-3 py-1 text-[10px] text-white/44">
+                <div className="px-3 py-0.5 text-[10px] text-white/42">
                   {segment.connectorText}
                 </div>
               )}
@@ -164,7 +164,7 @@ export function JourneyResults({
           ))}
         </div>
 
-        <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-[14px] border border-white/10 bg-white/[0.018] px-3 py-2.5">
+        <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-[14px] border border-white/10 bg-white/[0.018] px-3 py-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-white/55">
               <Clock3 className="h-4 w-4" />
@@ -440,7 +440,7 @@ function buildWalkTitle({
   }
 
   if (isLast && previousSegment?.type === "TRANSIT") {
-    const from = segment.from ?? "stationen";
+    const from = formatTransitSourceLabel(segment.from, previousSegment.mode);
     const to = getPrimaryPlaceLabel(destinationLabel ?? segment.to, "destinationen");
     return `Gå från ${from} till ${to}`;
   }
