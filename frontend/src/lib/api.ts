@@ -17,25 +17,21 @@ export async function apiFetch<T>(
     const text = await response.text();
 
     if (contentType.includes("application/json")) {
-      try {
-        const parsed = JSON.parse(text) as {
-          message?: string;
-          error?: string;
-          error_message?: string;
-        };
-        const message =
-          parsed.message ||
-          parsed.error_message ||
-          parsed.error ||
-          "Något gick fel.";
+      type ApiErrorBody = {
+        message?: string;
+        error?: string;
+        error_message?: string;
+      };
+      let parsed: ApiErrorBody | null = null;
 
-        throw new Error(message);
-      } catch (error) {
-        if (error instanceof Error) {
-          throw error;
-        }
+      try {
+        parsed = JSON.parse(text) as ApiErrorBody;
+      } catch {
         throw new Error("Något gick fel. Försök igen.");
       }
+
+      const message = parsed?.message || parsed?.error_message || parsed?.error;
+      throw new Error(message || "Något gick fel.");
     }
 
     throw new Error(text || "Request failed");
