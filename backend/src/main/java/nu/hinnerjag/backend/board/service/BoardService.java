@@ -13,6 +13,7 @@ import nu.hinnerjag.backend.external.trafiklab.transport.dto.TransportStopPointF
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,49 +102,25 @@ public class BoardService {
                         List<SiteWithDistance> candidates,
                         Map<Integer, String> metroStationIndex
         ) {
+                        Map<String, List<SiteWithDistance>> candidatesByStation = new LinkedHashMap<>();
+
                         for (SiteWithDistance candidate : candidates) {
-                                // Prefer station name from departures' stop_area when available (cheap: uses cached client)
-                                String stationName = null;
+                                String stationName = resolveMetroStationName(candidate, metroStationIndex);
+                                candidatesByStation.computeIfAbsent(stationName, ignored -> new ArrayList<>()).add(candidate);
+                        }
 
-                                TransportDeparturesResponse rawDepartures = trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
-                                                candidate.site().siteId(),
-                                                METRO_TRANSPORT_MODE,
-                                                NEARBY_FORECAST_MINUTES
-                                );
-
-                                if (rawDepartures != null && rawDepartures.departures() != null) {
-                                        for (var dep : rawDepartures.departures()) {
-                                                if (dep == null) continue;
-
-                                                try {
-                                                        var stopArea = dep.stopArea();
-                                                        if (stopArea != null && "METROSTN".equalsIgnoreCase(stopArea.type())) {
-                                                                var name = stopArea.name();
-                                                                if (name != null && !name.isBlank()) {
-                                                                        stationName = name;
-                                                                        break;
-                                                                }
-                                                        }
-                                                } catch (NoSuchMethodError | UnsupportedOperationException ignored) {
-                                                        // Defensive: if DTO doesn't expose stopArea, fall back to resolver
-                                                }
-                                        }
-                                }
-
-                                if (stationName == null) {
-                                        stationName = metroStationResolver.resolveMetroStationName(
-                                                        candidate.site(),
-                                                        metroStationIndex
-                                        );
-                                }
+                        for (Map.Entry<String, List<SiteWithDistance>> stationEntry : candidatesByStation.entrySet()) {
+                                String stationName = stationEntry.getKey();
+                                List<SiteWithDistance> stationCandidates = stationEntry.getValue();
+                                SiteWithDistance nearestCandidate = stationCandidates.getFirst();
 
                                 BoardAccessResponse access = boardAccessService.createMetroAccess(
-                                                candidate.distanceMeters(),
+                                                nearestCandidate.distanceMeters(),
                                                 stationName
                                 );
 
-                                List<BoardDepartureResponse> metroDepartures = findPreparedDepartures(
-                                                candidate.site().siteId(),
+                                List<BoardDepartureResponse> metroDepartures = findPreparedDeparturesForSites(
+                                                stationCandidates,
                                                 access,
                                                 METRO_TRANSPORT_MODE,
                                                 this::isMetroDeparture,
@@ -152,9 +129,9 @@ public class BoardService {
 
                                 if (!metroDepartures.isEmpty()) {
                                         return new NearbyBoardSiteResponse(
-                                                        candidate.site().siteId(),
+                                                        nearestCandidate.site().siteId(),
                                                         stationName,
-                                                        boardDistanceService.roundDistance(candidate.distanceMeters()),
+                                                        boardDistanceService.roundDistance(nearestCandidate.distanceMeters()),
                                                         access,
                                                         metroDepartures
                                         );
@@ -253,6 +230,54 @@ public class BoardService {
                 return best;
     }
 
+    private List<BoardDepartureResponse> findPreparedDeparturesForSites(
+            List<SiteWithDistance> candidates,
+            BoardAccessResponse access,
+            String transportMode,
+            java.util.function.Predicate<BoardDepartureResponse> modeFilter,
+            int minimumCount
+    ) {
+        List<BoardDepartureResponse> departures = loadPreparedDeparturesForSites(
+                candidates,
+                access,
+                transportMode,
+                NEARBY_FORECAST_MINUTES,
+                modeFilter
+        );
+
+        if (departures.size() >= minimumCount) {
+            return departures;
+        }
+
+        List<BoardDepartureResponse> extendedDepartures = loadPreparedDeparturesForSites(
+                candidates,
+                access,
+                transportMode,
+                EXTENDED_FORECAST_MINUTES,
+                modeFilter
+        );
+
+        List<BoardDepartureResponse> best = extendedDepartures.size() > departures.size() ? extendedDepartures : departures;
+
+        if (best.size() >= minimumCount) {
+            return best;
+        }
+
+        if (transportMode != null) {
+            List<BoardDepartureResponse> fallback = loadPreparedDeparturesForSites(
+                    candidates,
+                    access,
+                    null,
+                    EXTENDED_FORECAST_MINUTES,
+                    modeFilter
+            );
+
+            return fallback.size() > best.size() ? fallback : best;
+        }
+
+        return best;
+    }
+
     private List<BoardDepartureResponse> loadPreparedDepartures(
             Integer siteId,
             BoardAccessResponse access,
@@ -268,6 +293,71 @@ public class BoardService {
 
         List<BoardDepartureResponse> departures = boardDepartureService.mapDeparturesWithAccess(response, access);
         return boardDepartureService.prepareDepartures(departures, modeFilter);
+    }
+
+    private List<BoardDepartureResponse> loadPreparedDeparturesForSites(
+            List<SiteWithDistance> candidates,
+            BoardAccessResponse access,
+            String transportMode,
+            int forecastMinutes,
+            java.util.function.Predicate<BoardDepartureResponse> modeFilter
+    ) {
+        List<BoardDepartureResponse> departures = new ArrayList<>();
+
+        for (SiteWithDistance candidate : candidates) {
+            TransportDeparturesResponse response = trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
+                    candidate.site().siteId(),
+                    transportMode,
+                    forecastMinutes
+            );
+
+            departures.addAll(boardDepartureService.mapDeparturesWithAccess(response, access));
+        }
+
+        return boardDepartureService.prepareDepartures(departures, modeFilter);
+    }
+
+    private String resolveMetroStationName(
+            SiteWithDistance candidate,
+            Map<Integer, String> metroStationIndex
+    ) {
+        String stationName = null;
+
+        TransportDeparturesResponse rawDepartures = trafiklabTransportClient.fetchDeparturesBySiteIdSafely(
+                candidate.site().siteId(),
+                METRO_TRANSPORT_MODE,
+                NEARBY_FORECAST_MINUTES
+        );
+
+        if (rawDepartures != null && rawDepartures.departures() != null) {
+            for (var dep : rawDepartures.departures()) {
+                if (dep == null) {
+                    continue;
+                }
+
+                try {
+                    var stopArea = dep.stopArea();
+                    if (stopArea != null && "METROSTN".equalsIgnoreCase(stopArea.type())) {
+                        var name = stopArea.name();
+                        if (name != null && !name.isBlank()) {
+                            stationName = name;
+                            break;
+                        }
+                    }
+                } catch (NoSuchMethodError | UnsupportedOperationException ignored) {
+                    // Fall back to stop-area index below.
+                }
+            }
+        }
+
+        if (stationName != null) {
+            return stationName;
+        }
+
+        return metroStationResolver.resolveMetroStationName(
+                candidate.site(),
+                metroStationIndex
+        );
     }
 
     private boolean isMetroDeparture(BoardDepartureResponse departure) {
