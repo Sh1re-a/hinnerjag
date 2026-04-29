@@ -72,13 +72,13 @@ public class ApiExceptionHandler {
     @ExceptionHandler(RestClientException.class)
     public ResponseEntity<Map<String, String>> handleProviderUnavailable(RestClientException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                .body(Map.of("message", "Journey provider is unavailable right now"));
+                .body(Map.of("message", "Traffic data is unavailable right now"));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericError(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("message", "Journey planning failed"));
+                .body(Map.of("message", "Something went wrong"));
     }
 
     private static String formatFieldError(FieldError error) {
