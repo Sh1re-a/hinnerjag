@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LocateFixed, Search } from "lucide-react";
 import { BusBoard } from "./components/BusBoard";
 import { BottomNav } from "./components/BottomNav";
@@ -14,8 +14,10 @@ import { heroTitle, iconButton, iconSize, inputClass, metaText, sectionLabel, sm
 
 type AddressState = { lat: number; lng: number; label: string };
 
+const LOCATION_PROMPT_DISMISSED_KEY = "hinnerjag-location-prompt-dismissed";
+
 function App() {
-  const [showLocationDialog, setShowLocationDialog] = useState(true);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [manualPosition, setManualPosition] = useState<AddressState | null>(null);
   const [currentView, setCurrentView] = useState<"landing" | "journey" | "about">("landing");
   const [query, setQuery] = useState("");
@@ -24,6 +26,66 @@ function App() {
 
   const { position, isLocating, locationError, requestPosition } =
     useCurrentPosition();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initLocationPrompt = async () => {
+      const dismissed = window.localStorage.getItem(LOCATION_PROMPT_DISMISSED_KEY) === "1";
+
+      if (position) {
+        if (isMounted) {
+          setShowLocationDialog(false);
+        }
+        return;
+      }
+
+      if (!("permissions" in navigator) || !navigator.permissions?.query) {
+        if (!dismissed && isMounted) {
+          setShowLocationDialog(true);
+        }
+        return;
+      }
+
+      try {
+        const permission = await navigator.permissions.query({ name: "geolocation" });
+
+        if (!isMounted) return;
+
+        if (permission.state === "granted") {
+          try {
+            await requestPosition();
+            window.localStorage.removeItem(LOCATION_PROMPT_DISMISSED_KEY);
+            if (isMounted) {
+              setShowLocationDialog(false);
+            }
+          } catch {
+            if (!dismissed) {
+              setShowLocationDialog(true);
+            }
+          }
+          return;
+        }
+
+        if (permission.state === "prompt") {
+          setShowLocationDialog(!dismissed);
+          return;
+        }
+
+        setShowLocationDialog(false);
+      } catch {
+        if (!dismissed && isMounted) {
+          setShowLocationDialog(true);
+        }
+      }
+    };
+
+    void initLocationPrompt();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [position, requestPosition]);
 
   const activePosition = manualPosition
     ? { lat: manualPosition.lat, lng: manualPosition.lng }
@@ -45,7 +107,7 @@ function App() {
   const addressLabel = manualPosition
     ? manualPosition.label
     : position
-      ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
+      ? "Din plats"
       : "Din position";
 
   const journeyOrigin = manualPosition
@@ -57,10 +119,20 @@ function App() {
   const handleAllowLocation = async () => {
     try {
       await requestPosition();
+      window.localStorage.removeItem(LOCATION_PROMPT_DISMISSED_KEY);
       setShowLocationDialog(false);
     } catch {
       // The location hook already stores a user-facing error message.
     }
+  };
+
+  const handleSkipLocation = () => {
+    window.localStorage.setItem(LOCATION_PROMPT_DISMISSED_KEY, "1");
+    setShowLocationDialog(false);
+  };
+
+  const handleOpenLocationDialog = () => {
+    setShowLocationDialog(true);
   };
 
   const handleSearch = async (value: string) => {
@@ -93,7 +165,7 @@ function App() {
           onAllow={() => {
             void handleAllowLocation();
           }}
-          onSkip={() => setShowLocationDialog(false)}
+          onSkip={handleSkipLocation}
         />
 
         <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[414px] flex-col px-3 pb-24 pt-3 sm:max-w-3xl sm:px-6">
@@ -104,7 +176,7 @@ function App() {
               {!position && !showLocationDialog && (
                 <button
                   onClick={() => {
-                    setShowLocationDialog(true);
+                    handleOpenLocationDialog();
                   }}
                   className="mt-4 rounded-[18px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white/82 backdrop-blur transition hover:bg-white/[0.07]"
                   type="button"
@@ -145,7 +217,14 @@ function App() {
                       }}
                     />
                   </div>
-                  <button type="button" className={iconButton} aria-label="Använd min position">
+                  <button
+                    type="button"
+                    className={iconButton}
+                    aria-label="Använd min position"
+                    onClick={() => {
+                      handleOpenLocationDialog();
+                    }}
+                  >
                     <LocateFixed className={iconSize} />
                   </button>
                 </div>
@@ -154,11 +233,11 @@ function App() {
                   <div className="mt-1 text-xs text-white/60">Söker…</div>
                 )}
                 {results.length > 0 && (
-                  <ul className="mt-2 overflow-hidden rounded-3xl border border-white/10 bg-[#1a2230] p-2">
+                  <ul className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-[#1a2230] p-2">
                     {results.map((result) => (
                       <li key={result.label} className="list-none">
                         <button
-                          className="block w-full rounded-2xl px-4 py-3 text-left text-sm text-white/85 transition hover:bg-white/5"
+                          className="block w-full rounded-lg px-4 py-3 text-left text-sm text-white/85 transition hover:bg-white/5"
                           onClick={() => {
                             setQuery(result.label);
                             setResults([]);
