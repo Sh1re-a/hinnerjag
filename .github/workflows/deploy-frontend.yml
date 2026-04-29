@@ -25,13 +25,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: google-github-actions/auth@v2
+      - name: Debug repo (verify Dockerfile present)
+        run: |
+          echo "PWD: $(pwd)"
+          ls -la
+          echo "--- frontend directory ---"
+          ls -la frontend || true
+          echo "--- frontend/Dockerfile ---"
+          sed -n '1,200p' frontend/Dockerfile || true
+
+      - uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          region: ${{ env.REGION }}
 
       - name: Set gcloud project
         run: gcloud config set project "$PROJECT_ID"
@@ -44,23 +58,25 @@ jobs:
           EOF
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
-
-      - name: Build frontend image
         run: |
-          docker build \
-            -f frontend/Dockerfile \
-            -t "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA" \
-            frontend
+          gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
 
-      - name: Push frontend image
-        run: docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
+      - name: Build and push frontend image (docker/build-push-action@v4)
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          platforms: linux/amd64
 
       - name: Deploy to Cloud Run
+        env:
+          IMAGE_URI: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         run: |
-          gcloud run deploy "$SERVICE_NAME" \
+          gcloud run deploy "${{ env.SERVICE_NAME }}" \
             --project "$PROJECT_ID" \
-            --image "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA" \
+            --image "$IMAGE_URI" \
             --region "$REGION" \
             --platform managed \
             --allow-unauthenticated \
