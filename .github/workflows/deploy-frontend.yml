@@ -40,10 +40,20 @@ jobs:
           VITE_MAPBOX_KEY=${{ secrets.VITE_MAPBOX_KEY }}
           EOF
 
-      - name: Build image
+      - name: Configure Docker for Artifact Registry
         run: |
-          gcloud builds submit frontend \
-            --tag "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            -f frontend/Dockerfile \
+            -t "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA" \
+            frontend
+
+      - name: Push frontend image
+        run: |
+          docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
 
       - name: Deploy to Cloud Run
         run: |
