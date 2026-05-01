@@ -33,15 +33,15 @@ I praktiken betyder det att HinnerJag:
 
 Projektet är inte byggt för att kännas tekniskt för användaren, men under huven används några tydliga verktyg:
 
-| Verktyg | Vad det används till |
-| --- | --- |
-| React | Bygger gränssnittet i webben |
-| TypeScript | Gör frontend-koden tydligare och mer stabil |
-| Vite | Startar och bygger frontend snabbt |
-| Spring Boot | Driver backend och API:erna |
-| Java 21 | Språket bakom backend-logiken |
-| Trafiklab / SL-data | Hämtar avgångar och reseinformation |
-| Mapbox | Används för adressökning |
+| Verktyg                 | Vad det används till                          |
+| ----------------------- | --------------------------------------------- |
+| React                   | Bygger gränssnittet i webben                  |
+| TypeScript              | Gör frontend-koden tydligare och mer stabil   |
+| Vite                    | Startar och bygger frontend snabbt            |
+| Spring Boot             | Driver backend och API:erna                   |
+| Java 21                 | Språket bakom backend-logiken                 |
+| Trafiklab / SL-data     | Hämtar avgångar och reseinformation           |
+| Mapbox                  | Används för adressökning                      |
 | Docker & Docker Compose | Gör det enkelt att köra hela projektet lokalt |
 
 ## Struktur i korthet
