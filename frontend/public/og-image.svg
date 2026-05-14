@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">HinnerJag</title>
+  <desc id="desc">Delningsbild för HinnerJag, en svensk webbapp för tunnelbana och buss.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#12233a"/>
+      <stop offset="0.48" stop-color="#07111c"/>
+      <stop offset="1" stop-color="#05070b"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#17283b"/>
+      <stop offset="1" stop-color="#0c1520"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <path d="M0 0h1200v630H0z" fill="url(#bg)"/>
+  <path d="M0 440c130-52 249-68 358-48 88 16 159 55 246 72 132 26 276-24 596-96v262H0z" fill="#0b1724" opacity="0.72"/>
+  <path d="M96 92h1008v446H96z" rx="34" fill="url(#panel)" stroke="#ffffff" stroke-opacity="0.08" filter="url(#shadow)"/>
+  <path d="M146 151h192" stroke="url(#accent)" stroke-width="8" stroke-linecap="round"/>
+  <text x="146" y="240" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="76" font-weight="800" letter-spacing="0">
+    Hinner<tspan font-style="italic" fill="#dffcf0">Jag?</tspan>
+  </text>
+  <text x="150" y="310" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="500">
+    Se om du hinner innan du går.
+  </text>
+  <g transform="translate(150 368)">
+    <rect width="276" height="72" rx="20" fill="#0f1b29" stroke="#ffffff" stroke-opacity="0.1"/>
+    <circle cx="38" cy="36" r="12" fill="#34d399"/>
+    <text x="66" y="45" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Liveavgångar</text>
+  </g>
+  <g transform="translate(450 368)">
+    <rect width="232" height="72" rx="20" fill="#0f1b29" stroke="#ffffff" stroke-opacity="0.1"/>
+    <path d="M36 20v32m0 0 15-15M36 52 21 37" stroke="#38bdf8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="66" y="45" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Gångtid</text>
+  </g>
+  <g transform="translate(720 150)">
+    <rect width="300" height="324" rx="36" fill="#09131f" stroke="#ffffff" stroke-opacity="0.1"/>
+    <rect x="42" y="42" width="216" height="58" rx="18" fill="#102238"/>
+    <text x="68" y="80" fill="#93c5fd" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">Tunnelbana</text>
+    <text x="42" y="170" fill="#34d399" font-family="Inter, Arial, sans-serif" font-size="86" font-weight="800">4 min</text>
+    <text x="46" y="226" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="600">Gå nu</text>
+    <path d="M44 270h212" stroke="#1f3348" stroke-width="6" stroke-linecap="round"/>
+    <path d="M44 270h132" stroke="url(#accent)" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <text x="150" y="502" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600">hinnerjag.nu</text>
+</svg>

@@ -24,8 +24,9 @@ export function AboutPage() {
       <section className="mb-4 px-1">
         <div className={sectionLabel}>OM</div>
         <p className="mt-3 max-w-[32rem] text-[15px] leading-7 text-white/68">
-          HinnerJag hjälper dig snabbt se om du hinner tunnelbanan eller bussen
-          innan du går.
+          HinnerJag gör vardagsresan enklare genom att kombinera liveavgångar,
+          gångtid och reseplanering i ett tydligt besked: gå nu, ta det lugnt
+          eller välj nästa avgång.
         </p>
       </section>
 
@@ -33,15 +34,15 @@ export function AboutPage() {
         <AboutSection title="Så fungerar det">
           <div className="flex items-start gap-3">
             <Waves className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-            <p>Vi räknar gångtid till station eller hållplats.</p>
+            <p>Vi räknar gångtid till närmaste station eller hållplats.</p>
           </div>
           <div className="flex items-start gap-3">
             <Waves className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-            <p>Vi jämför med avgångar i realtid.</p>
+            <p>Vi jämför din startpunkt med aktuella avgångar i realtid.</p>
           </div>
           <div className="flex items-start gap-3">
             <Waves className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-            <p>Vi visar tydligt: Missar, Gå nu eller Du hinner.</p>
+            <p>Vi visar tydligt om du hinner, behöver gå nu eller bör ta nästa avgång.</p>
           </div>
         </AboutSection>
 
@@ -85,7 +86,7 @@ export function AboutPage() {
         <AboutSection title="Säkerhet och plats">
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-            <p>Plats används för att visa avgångar nära dig.</p>
+            <p>Din plats används bara för att visa relevanta avgångar nära dig.</p>
           </div>
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
@@ -93,7 +94,7 @@ export function AboutPage() {
           </div>
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-            <p>Spara inte plats permanent om det inte behövs.</p>
+            <p>Plats sparas inte permanent av appen.</p>
           </div>
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />

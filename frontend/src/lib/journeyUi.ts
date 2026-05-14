@@ -227,27 +227,27 @@ export function getLiveJourneyStatus(data: JourneyTrip, currentTimeMs: number) {
 
   if (!leaveAt) {
     if (fallbackStatus.key === "MISS") {
-      return buildLiveStatus("MISS", null, data.recommendedLeaveAt);
+      return buildLiveStatus("MISS", null);
     }
     if (fallbackStatus.key === "TIGHT") {
-      return buildLiveStatus("TIGHT", fallbackLeaveMin, data.recommendedLeaveAt);
+      return buildLiveStatus("TIGHT", fallbackLeaveMin);
     }
-    return buildLiveStatus("SAFE", fallbackLeaveMin, data.recommendedLeaveAt);
+    return buildLiveStatus("SAFE", fallbackLeaveMin);
   }
 
   const leaveDiffMinutes = getMinuteDiff(currentTimeMs, leaveAt.getTime());
   const departurePassed = departureAt ? currentTimeMs >= departureAt.getTime() : false;
 
   if (departurePassed) {
-    return buildLiveStatus("MISS", leaveDiffMinutes, data.recommendedLeaveAt);
+    return buildLiveStatus("MISS", leaveDiffMinutes);
   }
   if (leaveDiffMinutes >= 2) {
-    return buildLiveStatus("SAFE", leaveDiffMinutes, data.recommendedLeaveAt);
+    return buildLiveStatus("SAFE", leaveDiffMinutes);
   }
   if (leaveDiffMinutes >= 0) {
-    return buildLiveStatus("TIGHT", leaveDiffMinutes, data.recommendedLeaveAt);
+    return buildLiveStatus("TIGHT", leaveDiffMinutes);
   }
-  return buildLiveStatus("ALREADY_LEFT", leaveDiffMinutes, data.recommendedLeaveAt);
+  return buildLiveStatus("ALREADY_LEFT", leaveDiffMinutes);
 }
 
 function buildStepLabel(segment: JourneySegment, index: number, transitIndex: number) {
@@ -263,7 +263,6 @@ function buildStepLabel(segment: JourneySegment, index: number, transitIndex: nu
 function buildLiveStatus(
   key: LiveJourneyStatus["key"],
   leaveDiffMinutes: number | null,
-  _leaveAt?: string | null,
 ): LiveJourneyStatus {
   if (key === "SAFE") {
     const leaveLabel =

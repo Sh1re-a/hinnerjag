@@ -217,8 +217,8 @@ function App() {
                   <h1 className={heroTitle}>Hinner jag?</h1>
                   <p className={`mt-2 max-w-[280px] ${smallText}`}>
                     {activePosition
-                      ? "Se om du hinner innan du går."
-                      : "Välj plats för att få en tydlig bild av vad du hinner just nu."}
+                      ? "Liveavgångar, gångtid och ett tydligt besked innan du går."
+                      : "Välj plats för att se avgångar nära dig och veta vad du hinner just nu."}
                   </p>
                 </div>
 
